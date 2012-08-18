@@ -1,4 +1,4 @@
-Source: erlang-otp-r15-full
+Source: erlang-otp
 Section: misc
 Priority: extra
 Maintainer: Karolis Petrauskas <k.petrauskas@gmail.com>
