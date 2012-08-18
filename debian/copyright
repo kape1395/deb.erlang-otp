@@ -2,8 +2,8 @@ Format: http://dep.debian.net/deps/dep5
 Upstream-Name: erlang-otp
 Source: http://www.erlang.org/
 
-Files: debian/* Makefile.in lib/diameter/Makefile 
-Copyright: 2012 Karolis Petrauskas <karolis@unknown>
+Files: debian/*
+Copyright: 2012 Karolis Petrauskas <k.petrauskas@gmail.com>
 License: GPL-2+
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

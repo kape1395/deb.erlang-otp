@@ -1,4 +1,22 @@
-http://www.debian.org/doc/manuals/maint-guide/dother.en.html#patches
-http://honk.sigxcpu.org/projects/git-buildpackage/manual-html/gbp.html
-https://honk.sigxcpu.org/piki/development/debian_packages_in_git/
 
+#
+#  First release.
+#
+git init deb.erlang-otp
+cd deb.erlang-otp
+git-import-orig -u 15B01 --pristine-tar /home/karolis/Downloads/otp_src_R15B01.tar.gz # Source package name: erlang-otp
+mkdir debian # Add all stuff.
+(
+    mkdir tmp-collect-emptydirs
+    cd tmp-collect-emptydirs
+    tar -xzf /home/karolis/Downloads/otp_src_R15B01.tar.gz
+    cd otp_src_R15B01
+    find . -type d -empty > ../../debian/gbp.prebuild.emptydirs
+    cd ../../
+    rm -rf tmp-collect-emptydirs
+)
+vi debian/gbp.conf
+vi debian/gbp.prebuild
+git add debian
+git commit -m "Debian packaging."
+git-buildpackage --git-pristine-tar
