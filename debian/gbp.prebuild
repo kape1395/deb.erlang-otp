@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cat debian/gbp.prebuild.emptydirs | xargs mkdir -pv
+
