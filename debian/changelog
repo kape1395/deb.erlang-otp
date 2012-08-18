@@ -1,4 +1,4 @@
-erlang-otp (15B01-1) unstable; urgency=low
+erlang-otp (15B01-0ubuntu1) precise; urgency=low
 
   * Packaging Erlang/OTP R15B01.
 
