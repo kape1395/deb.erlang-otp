@@ -17,8 +17,11 @@ mkdir debian # Add all stuff.
 )
 vi debian/gbp.conf
 vi debian/gbp.prebuild
+vi debian/gbp.cleaner
 git add debian
 git commit -m "Debian packaging."
 git-buildpackage --git-pristine-tar
+git-buildpackage --git-pristine-tar --git-builder="debuild -i\.git -I.git -S"
+git-buildpackage --git-pristine-tar --git-builder="debuild -i\.git -I.git -b"
 git clean -dxf
 git reset --hard
