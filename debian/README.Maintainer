@@ -20,3 +20,5 @@ vi debian/gbp.prebuild
 git add debian
 git commit -m "Debian packaging."
 git-buildpackage --git-pristine-tar
+git clean -dxf
+git reset --hard
