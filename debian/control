@@ -1,19 +1,21 @@
-Source: erlang-otp
-Section: multiverse
+Source: erlang-otp-r15-full
+Section: misc
 Priority: extra
 Maintainer: Karolis Petrauskas <k.petrauskas@gmail.com>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev, quilt,
+Build-Depends: debhelper (>= 8.0.0), autotools-dev,
  libncurses5-dev, xsltproc, unixodbc-dev, libssl-dev,
  libwxgtk2.8-dev, libgl1-mesa-dev, libglu1-mesa-dev
 Standards-Version: 3.9.2
 Homepage: http://www.erlang.org
 
-Package: erlang-otp
+Package: erlang-otp-r15-full
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
  libncurses5, unixodbc, openssl,
  libwxgtk2.8-0, libgl1-mesa-glx, libglu1-mesa
 Description: Erlang/OTP full installation.
- includes all the components, originally provided by the Erlang/OTP.
- This package was created because the original Ubuntu package was
- outdated and had excluded some components (like wx*).
+ full erlang installation, includes all the components, originally
+ provided by the Erlang/OTP. This package was created because the
+ original Ubuntu package was outdated and had excluded some
+ components (like wx*). The Erlang/OTP will be installed in
+ /opt/erlang-otp-r15.

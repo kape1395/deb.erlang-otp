@@ -13,8 +13,12 @@
 	dh $@ 
 
 override_dh_auto_clean:
-	#echo "# NOTE: Skipping dh_auto_clean."
+	@echo "# NOTE: Skipping dh_auto_clean."
 
 override_dh_clean:
+	@echo "# NOTE: Skipping dh_clean."
 	rm -fv debian/*.log
+
+override_dh_auto_configure:
+	dh_auto_configure -- --prefix=/opt/erlang-otp-r15
 
