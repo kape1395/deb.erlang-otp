@@ -1,4 +1,9 @@
 erlang-otp.debhelper.log
 erlang-otp.substvars
 erlang-otp/
+erlang-otp-r15-full.debhelper.log
+erlang-otp-r15-full.substvars
+erlang-otp-r15-full/
 files
+.ditz-config
+

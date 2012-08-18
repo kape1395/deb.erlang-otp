@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Handle "alternatives" when installing.
+desc: ""
+type: :task
+component: deb.erlang-otp
+release: 
+reporter: Karolis Petrauskas <k.petrauskas@gmail.com>
+status: :unstarted
+disposition: 
+creation_time: 2012-08-18 15:53:09.586843 Z
+references: []
+
+id: 84b703edff5780a93413b50c248f797822e21fbf
+log_events: 
+- - 2012-08-18 15:53:10.922878 Z
+  - Karolis Petrauskas <k.petrauskas@gmail.com>
+  - created
+  - ""
