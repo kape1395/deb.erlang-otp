@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2011. All Rights Reserved.
+%% Copyright Ericsson AB 2011-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -876,7 +876,9 @@ trace_disallowed_calls(Node) ->
     MasterProc = self(),
     rpc:call(Node,dbg,tracer,[process,{fun(T,_) -> MasterProc ! T end,[]}]),
     rpc:call(Node,dbg,p,[all,call]),
-    rpc:call(Node,dbg,tp,[file,[{'_',[],[{message,{caller}}]}]]).
+    rpc:call(Node,dbg,tp,[file,[{'_',[],[{message,{caller}}]}]]),
+    %% File:native_name_encoding/0 is a BIF and OK to use
+    rpc:call(Node,dbg,ctp,[file,native_name_encoding,0]).
 
 check_disallowed_calls(TestNode,Line) ->
     receive

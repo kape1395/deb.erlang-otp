@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 2001-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2001-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -18,7 +18,6 @@
 %%
 %%
 -module(asn1rt_per_bin).
-
 %% encoding / decoding of PER aligned
 
 -include("asn1_records.hrl").
@@ -57,7 +56,7 @@
 	 encode_NumericString/2, decode_NumericString/2,
 	 encode_ObjectDescriptor/2, decode_ObjectDescriptor/1
 	]).
--export([complete_bytes/1, getbits/2, getoctets/2]).
+-export([complete_bytes/1, getbits/2, getoctets/2, minimum_bits/1]).
 
 -define('16K',16384).
 -define('32K',32768).
@@ -695,21 +694,28 @@ encode_constrained_number({Lb,Ub},Val) when Val >= Lb, Ub >= Val ->
 	    {octets,[Val2]};
 	Range  =< 65536 ->
 	    {octets,<<Val2:16>>};
-	Range =< 16#1000000  ->
-	    Octs = eint_positive(Val2),
-	    [{bits,2,length(Octs)-1},{octets,Octs}];
-	Range =< 16#100000000  ->
-	    Octs = eint_positive(Val2),
-	    [{bits,2,length(Octs)-1},{octets,Octs}];
-	Range =< 16#10000000000  ->
-	    Octs = eint_positive(Val2),
-	    [{bits,3,length(Octs)-1},{octets,Octs}];
+	Range =< (1 bsl (255*8))  ->
+            Octs = binary:encode_unsigned(Val2),
+            RangeOcts = binary:encode_unsigned(Range - 1),
+            OctsLen = erlang:byte_size(Octs),
+            RangeOctsLen = erlang:byte_size(RangeOcts),
+            LengthBitsNeeded = minimum_bits(RangeOctsLen - 1),
+            [{bits, LengthBitsNeeded, OctsLen - 1}, {octets, Octs}];
 	true  ->
 	    exit({not_supported,{integer_range,Range}})
     end;
 encode_constrained_number(Range,Val) -> 
     exit({error,{asn1,{integer_range,Range,value,Val}}}).
 
+%% For some reason the minimum bits needed in the length field in encoding of
+%% constrained whole numbers must always be atleast 2?
+minimum_bits(N) when N < 4 -> 2;
+minimum_bits(N) when N < 8 -> 3;
+minimum_bits(N) when N < 16 -> 4;
+minimum_bits(N) when N < 32 -> 5;
+minimum_bits(N) when N < 64 -> 6;
+minimum_bits(N) when N < 128 -> 7;
+minimum_bits(_N) -> 8.
 
 decode_constrained_number(Buffer,{Lb,Ub}) ->
     Range = Ub - Lb + 1,
@@ -738,18 +744,12 @@ decode_constrained_number(Buffer,{Lb,Ub}) ->
 		getoctets(Buffer,1);
 	    Range  =< 65536 ->
 		getoctets(Buffer,2);
-	    Range =< 16#1000000  ->
-		{Len,Bytes2} = decode_length(Buffer,{1,3}),
-		{Octs,Bytes3} = getoctets_as_list(Bytes2,Len),
-		{dec_pos_integer(Octs),Bytes3};
-	    Range =< 16#100000000  ->
-		{Len,Bytes2} = decode_length(Buffer,{1,4}),
-		{Octs,Bytes3} = getoctets_as_list(Bytes2,Len),
-		{dec_pos_integer(Octs),Bytes3};
-	    Range =< 16#10000000000  ->
-		{Len,Bytes2} = decode_length(Buffer,{1,5}),
-		{Octs,Bytes3} = getoctets_as_list(Bytes2,Len),
-		{dec_pos_integer(Octs),Bytes3};
+            Range =< (1 bsl (255*8))  ->
+                OList = binary:bin_to_list(binary:encode_unsigned(Range - 1)),
+                RangeOctLen = length(OList),
+                {Len, Bytes} = decode_length(Buffer, {1, RangeOctLen}),
+                {Octs, RestBytes} = getoctets_as_list(Bytes, Len),
+                {binary:decode_unsigned(binary:list_to_bin(Octs)), RestBytes};
 	    true  ->
 		exit({not_supported,{integer_range,Range}})
 	end,
@@ -803,8 +803,6 @@ decode_unconstrained_number(Bytes) ->
     {Ints,Bytes3} = getoctets_as_list(Bytes2,Len),
     {dec_integer(Ints),Bytes3}.
 
-dec_pos_integer(Ints) ->
-    decpint(Ints, 8 * (length(Ints) - 1)).
 dec_integer(Ints) when hd(Ints) band 255 =< 127 -> %% Positive number
     decpint(Ints, 8 * (length(Ints) - 1));
 dec_integer(Ints) ->                        %% Negative

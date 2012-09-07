@@ -34,13 +34,19 @@
 		   profile=[],
 		   logdir=["."],
 		   logopts=[],
+		   basic_html=[],
+		   verbosity=[],
+		   silent_connections=[],
 		   cover=[],
 		   config=[],
 		   userconfig=[],
 		   event_handler=[],
 		   ct_hooks=[],
 		   enable_builtin_hooks=true,
+		   release_shell=false,
 		   include=[],
+		   auto_compile=[],
+		   stylesheet=[],
 		   multiply_timetraps=[],
 		   scale_timetraps=[],
 		   create_priv_dir=[],
@@ -64,3 +70,11 @@
 -define(ct_config_txt, ct_config_plain).
 
 -define(ct_profile_file, ".common_test").
+
+-define(css_default, "ct_default.css").
+-define(sortable_table_name, "SortableTable").
+-define(jquery_script, "jquery-latest.js").
+-define(tablesorter_script, "jquery.tablesorter.min.js").
+
+%% Logging information for error handler
+-record(conn_log, {client, name, address, action, module}).

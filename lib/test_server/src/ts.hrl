@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 1997-2009. All Rights Reserved.
+%% Copyright Ericsson AB 1997-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -28,6 +28,7 @@
 -define(run_summary, "suite.summary").
 -define(cover_total,"total_cover.log").
 -define(variables, "variables").
+-define(cross_variables, "variables-cross").
 -define(LF, [10]).                              % Newline in VxWorks script
 -define(CHAR_PER_LINE, 60).                     % Characters per VxWorks script building line
 -define(CROSS_COOKIE, "cross").                 % cookie used when cross platform testing

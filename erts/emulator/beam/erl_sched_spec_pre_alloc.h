@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 2011. All Rights Reserved.
+ * Copyright Ericsson AB 2011-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -142,7 +142,8 @@ check_local_list(erts_sspa_chunk_header_t *chdr)
 erts_sspa_data_t *erts_sspa_create(size_t blk_sz,
 				   int pa_size);
 void erts_sspa_remote_free(erts_sspa_chunk_header_t *chdr,
-			   erts_sspa_blk_t *blk);
+			   erts_sspa_blk_t *blk,
+			   int cinit);
 erts_sspa_blk_t *erts_sspa_process_remote_frees(erts_sspa_chunk_header_t *chdr,
 						erts_sspa_blk_t *old_res);
 
@@ -216,7 +217,7 @@ erts_sspa_free(erts_sspa_data_t *data, int cix, char *cblk)
     chdr = &chnk->aligned.header;
     if (chnk_cix != cix) {
 	/* Remote chunk */
-	erts_sspa_remote_free(chdr, blk);
+	erts_sspa_remote_free(chdr, blk, chnk_cix - cix);
     }
     else {
 	/* Local chunk */

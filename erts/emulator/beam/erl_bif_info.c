@@ -25,7 +25,6 @@
 #include "erl_vm.h"
 #include "global.h"
 #include "erl_process.h"
-#include "erl_nmgc.h"
 #include "error.h"
 #include "erl_driver.h"
 #include "bif.h"
@@ -89,12 +88,6 @@ static char erts_system_version[] = ("Erlang " ERLANG_OTP_RELEASE
 #ifdef ERTS_ENABLE_KERNEL_POLL
 				     " [kernel-poll:%s]"
 #endif	
-#ifdef HYBRID
-				     " [hybrid heap]"
-#endif
-#ifdef INCREMENTAL
-				     " [incremental GC]"
-#endif
 #ifdef ET_DEBUG
 #if ET_DEBUG
 				     " [type-assertions]"
@@ -576,9 +569,6 @@ static Eterm pi_args[] = {
     am_min_bin_vheap_size,
     am_current_location,
     am_current_stacktrace,
-#ifdef HYBRID
-    am_message_binary
-#endif
 };    
 
 #define ERTS_PI_ARGS ((int) (sizeof(pi_args)/sizeof(Eterm)))
@@ -626,9 +616,6 @@ pi_arg2ix(Eterm arg)
     case am_min_bin_vheap_size:			return 28;
     case am_current_location:			return 29;
     case am_current_stacktrace:			return 30;
-#ifdef HYBRID
-    case am_message_binary:			return 31;
-#endif
     default:					return -1;
     }
 }
@@ -1081,12 +1068,8 @@ process_info_aux(Process *BIF_P,
 		if (rp != BIF_P) {
 		    Eterm msg = ERL_MESSAGE_TERM(mq[i].msgp);
 		    if (is_value(msg)) {
-			mq[i].copy_struct_size = (is_immed(msg)
-#ifdef HYBRID
-						  || NO_COPY(msg)
-#endif
-						  ? 0
-						  : size_object(msg));
+			mq[i].copy_struct_size = (is_immed(msg)? 0 :
+						  size_object(msg));
 		    }
 		    else if (mq[i].msgp->data.attached) {
 			mq[i].copy_struct_size
@@ -1526,16 +1509,6 @@ process_info_aux(Process *BIF_P,
 	break;
     }
 
-#ifdef HYBRID
-    case am_message_binary: {
-	Uint sz = 3;
-	(void) bld_bin_list(NULL, &sz, erts_global_offheap.mso);
-	hp = HAlloc(BIF_P, sz);
-	res = bld_bin_list(&hp, NULL, erts_global_offheap.mso);
-	break;
-    }
-#endif
-
     case am_sequential_trace_token:
 	res = copy_object(rp->seq_trace_token, BIF_P);
 	hp = HAlloc(BIF_P, 3);
@@ -1724,7 +1697,7 @@ static int check_if_xml(void)
 {
     char buf[1];
     size_t bufsz = sizeof(buf);
-    return erts_sys_getenv("VALGRIND_LOG_XML", buf, &bufsz) >= 0;
+    return erts_sys_getenv_raw("VALGRIND_LOG_XML", buf, &bufsz) >= 0;
 }
 #else
 #define check_if_xml() 0
@@ -2354,36 +2327,8 @@ BIF_RETTYPE system_info_1(BIF_ALIST_1)
 #endif
     } else if (BIF_ARG_1 == am_heap_sizes) {
 	return erts_heap_sizes(BIF_P);
-    } else if (BIF_ARG_1 == am_global_heaps_size) {
-#ifdef HYBRID
-	Uint hsz = 0;
-	Uint sz = 0;
-
-	sz += global_heap_sz;
-#ifdef INCREMENTAL
-        /* The size of the old generation is a bit hard to define here...
-         * The amount of live data in the last collection perhaps..? */
-        sz = 0;
-#else
-	if (global_old_hend && global_old_heap)
-	    sz += global_old_hend - global_old_heap;
-#endif
-
-	sz *= sizeof(Eterm);
-
-	(void) erts_bld_uint(NULL, &hsz, sz);
-	hp = hsz ? HAlloc(BIF_P, hsz) : NULL;
-	res = erts_bld_uint(&hp, NULL, sz);
-#else
-	res = make_small(0);
-#endif
-	return res;
     } else if (BIF_ARG_1 == am_heap_type) {
-#if defined(HYBRID)
-        return am_hybrid;
-#else
 	return am_private;
-#endif
     } else if (ERTS_IS_ATOM_STR("cpu_topology", BIF_ARG_1)) {
 	res = erts_get_cpu_topology_term(BIF_P, am_used);
 	BIF_TRAP1(erts_format_cpu_topology_trap, BIF_P, res);
@@ -2765,7 +2710,8 @@ port_info_1(BIF_ALIST_1)
 	am_id,
 	am_connected,
 	am_input,
-	am_output
+	am_output,
+	am_os_pid
     };
     Eterm items[ASIZE(keys)];
     Eterm result = NIL;
@@ -2822,6 +2768,7 @@ port_info_1(BIF_ALIST_1)
 **    name        String
 **    input       Number of bytes input from port program
 **    output      Number of bytes output to the port program
+**    os_pid      The child's process ID
 */
 
 BIF_RETTYPE port_info_2(BIF_ALIST_2)
@@ -2921,6 +2868,18 @@ static BIF_RETTYPE port_info(Process* p, Eterm portid, Eterm item)
 	(void) erts_bld_uint(NULL, &hsz, n);
 	hp = HAlloc(p, hsz);
 	res = erts_bld_uint(&hp, NULL, n);
+    }
+    else if (item == am_os_pid) {
+        if (prt->os_pid >= 0) {
+            Uint hsz = 3;
+            UWord n = prt->os_pid;
+            (void) erts_bld_uword(NULL, &hsz, n);
+            hp = HAlloc(p, hsz);
+            res = erts_bld_uword(&hp, NULL, n);
+        } else {
+	    hp = HAlloc(p, 3);
+	    res = am_undefined;
+        }
     }
     else if (item == am_registered_name) {
 	RegProc *reg;
@@ -4110,48 +4069,52 @@ BIF_RETTYPE erts_debug_lock_counters_1(BIF_ALIST_1)
 	Eterm* tp = tuple_val(BIF_ARG_1);
 
 	switch (arityval(tp[0])) {
-	    case 2:
+	    case 2: {
+		int opt = 0;
+		int val = 0;
 		if (ERTS_IS_ATOM_STR("copy_save", tp[1])) {
-		    erts_smp_proc_unlock(BIF_P, ERTS_PROC_LOCK_MAIN);
-		    erts_smp_thr_progress_block();
-		    if (tp[2] == am_true) {
-
-			res = erts_lcnt_set_rt_opt(ERTS_LCNT_OPT_COPYSAVE) ? am_true : am_false;
-
-		    } else if (tp[2] == am_false) {
-
-			res = erts_lcnt_clear_rt_opt(ERTS_LCNT_OPT_COPYSAVE) ? am_true : am_false;
-
-		    } else {
-			erts_smp_thr_progress_unblock();
-			erts_smp_proc_lock(BIF_P, ERTS_PROC_LOCK_MAIN);
-			BIF_ERROR(BIF_P, BADARG);
-		    }
-		    erts_smp_thr_progress_unblock();
-		    erts_smp_proc_lock(BIF_P, ERTS_PROC_LOCK_MAIN);
-		    BIF_RET(res);
-
+		    opt = ERTS_LCNT_OPT_COPYSAVE;
 		} else if (ERTS_IS_ATOM_STR("process_locks", tp[1])) {
-		    erts_smp_proc_unlock(BIF_P, ERTS_PROC_LOCK_MAIN);
-		    erts_smp_thr_progress_block();
-		    if (tp[2] == am_true) {
+		    opt = ERTS_LCNT_OPT_PROCLOCK;
+		} else if (ERTS_IS_ATOM_STR("port_locks", tp[1])) {
+		    opt = ERTS_LCNT_OPT_PORTLOCK;
+		} else if (ERTS_IS_ATOM_STR("suspend", tp[1])) {
+		    opt = ERTS_LCNT_OPT_SUSPEND;
+		} else if (ERTS_IS_ATOM_STR("location", tp[1])) {
+		    opt = ERTS_LCNT_OPT_LOCATION;
+		} else {
+		    BIF_ERROR(BIF_P, BADARG);
+		}
+		if (tp[2] == am_true) {
+		    val = 1;
+		} else if (tp[2] == am_false) {
+		    val = 0;
+		} else {
+		    BIF_ERROR(BIF_P, BADARG);
+		}
 
-			res = erts_lcnt_set_rt_opt(ERTS_LCNT_OPT_PROCLOCK) ? am_true : am_false;
-
-		    } else if (tp[2] == am_false) {
-
-			res = erts_lcnt_set_rt_opt(ERTS_LCNT_OPT_PROCLOCK) ? am_true : am_false;
-
-		    } else {
-			erts_smp_thr_progress_unblock();
-			erts_smp_proc_lock(BIF_P, ERTS_PROC_LOCK_MAIN);
-			BIF_ERROR(BIF_P, BADARG);
+		erts_smp_proc_unlock(BIF_P, ERTS_PROC_LOCK_MAIN);
+		erts_smp_thr_progress_block();
+		
+		if (val) {
+		    res = erts_lcnt_set_rt_opt(opt) ? am_true : am_false;
+		} else {
+		    res = erts_lcnt_clear_rt_opt(opt) ? am_true : am_false;
+		}
+#ifdef ERTS_SMP
+		if (res != tp[2]) {
+		    if (opt == ERTS_LCNT_OPT_PORTLOCK) {
+			erts_lcnt_enable_io_lock_count(val);
+		    } else if (opt == ERTS_LCNT_OPT_PROCLOCK) {
+			erts_lcnt_enable_proc_lock_count(val);
 		    }
-		    erts_smp_thr_progress_unblock();
-		    erts_smp_proc_lock(BIF_P, ERTS_PROC_LOCK_MAIN);
-		    BIF_RET(res);
-		 }
-	    break;
+		}
+#endif
+		erts_smp_thr_progress_unblock();
+		erts_smp_proc_lock(BIF_P, ERTS_PROC_LOCK_MAIN);
+		BIF_RET(res);
+		break;
+	    }
      
 	    default:
 	    break;

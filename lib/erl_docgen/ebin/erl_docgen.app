@@ -1,6 +1,6 @@
 {application, erl_docgen,
  [{description, "Misc tools for building documentation"},
-  {vsn, "0.3.1"},
+  {vsn, "0.3.2"},
   {modules, [docgen_otp_specs,
   	     docgen_edoc_xml_cb,
 	     docgen_xmerl_xml_cb

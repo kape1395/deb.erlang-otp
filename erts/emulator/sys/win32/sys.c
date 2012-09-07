@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 1996-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1996-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -68,9 +68,9 @@ static int async_write_file(struct async_io* aio, LPVOID buf, DWORD numToWrite);
 static int get_overlapped_result(struct async_io* aio,
 				 LPDWORD pBytesRead, BOOL wait);
 static BOOL create_child_process(char *, HANDLE, HANDLE,
-			       HANDLE, LPHANDLE, BOOL,
-			       LPVOID, LPTSTR, unsigned,
-			       char **, int *);
+				 HANDLE, LPHANDLE, LPDWORD, BOOL,
+				 LPVOID, LPTSTR, unsigned,
+				 char **, int *);
 static int create_pipe(LPHANDLE, LPHANDLE, BOOL, BOOL);
 static int application_type(const char* originalName, char fullPath[MAX_PATH],
 			   BOOL search_in_path, BOOL handle_quotes,
@@ -1136,6 +1136,7 @@ spawn_start(ErlDrvPort port_num, char* name, SysDriverOpts* opts)
     HANDLE hChildStdin = INVALID_HANDLE_VALUE;		/* Child's stdin. */
     HANDLE hChildStdout = INVALID_HANDLE_VALUE;	/* Child's stout. */
     HANDLE hChildStderr = INVALID_HANDLE_VALUE;	/* Child's sterr. */
+    DWORD pid;
     int close_child_stderr = 0;
     DriverData* dp;		/* Pointer to driver data. */
     ErlDrvData retval = ERL_DRV_ERROR_GENERAL; /* Return value. */
@@ -1203,14 +1204,13 @@ spawn_start(ErlDrvPort port_num, char* name, SysDriverOpts* opts)
      */
 
     DEBUGF(("Spawning \"%s\"\n", name));
-    envir = win_build_environment(envir); /* Still an ansi environment, could be
-					     converted to unicode for spawn_executable, but
-					     that is not done (yet) */ 
+    envir = win_build_environment(envir); /* Always a unicode environment */ 
     ok = create_child_process(name, 
 			    hChildStdin, 
 			    hChildStdout,
 			    hChildStderr,
 			    &dp->port_pid,
+			    &pid,
 			    opts->hide_window,
 			    (LPVOID) envir,
 			    (LPTSTR) opts->wd,
@@ -1254,6 +1254,9 @@ spawn_start(ErlDrvPort port_num, char* name, SysDriverOpts* opts)
 #endif
 	retval = set_driver_data(dp, hFromChild, hToChild, opts->read_write,
 				 opts->exit_status);
+	if (retval != ERL_DRV_ERROR_GENERAL && retval != ERL_DRV_ERROR_ERRNO)
+	    /* We assume that this cannot generate a negative number */
+	    erts_port[port_num].os_pid = (SWord) pid;
     }
     
     if (retval != ERL_DRV_ERROR_GENERAL && retval != ERL_DRV_ERROR_ERRNO)
@@ -1397,7 +1400,8 @@ create_child_process
  HANDLE hStdin,  /* The standard input handle for child. */
  HANDLE hStdout, /* The standard output handle for child. */ 
  HANDLE hStderr, /* The standard error handle for child. */
- LPHANDLE phPid, /* Pointer to variable to received PID. */
+ LPHANDLE phPid, /* Pointer to variable to received Process handle. */
+ LPDWORD pdwID,   /* Pointer to variable to received Process ID */
  BOOL hide,      /* Hide the window unconditionally. */
  LPVOID env,     /* Environment for the child */
  LPTSTR wd,      /* Working dir for the child */
@@ -1479,7 +1483,8 @@ create_child_process
 			    NULL, 
 			    NULL, 
 			    TRUE, 
-			    createFlags | staticCreateFlags, 
+			    createFlags | staticCreateFlags | 
+			    CREATE_UNICODE_ENVIRONMENT, 
 			    env, 
 			    wd, 
 			    &siStartInfo, 
@@ -1607,7 +1612,8 @@ create_child_process
 			    NULL, 
 			    NULL, 
 			    TRUE, 
-			    createFlags | staticCreateFlags, 
+			    createFlags | staticCreateFlags | 
+			    CREATE_UNICODE_ENVIRONMENT, 
 			    env, 
 			    (WCHAR *) wd, 
 			    &siStartInfo, 
@@ -1629,7 +1635,8 @@ create_child_process
     }
     CloseHandle(piProcInfo.hThread); /* Necessary to avoid resource leak. */
     *phPid = piProcInfo.hProcess;
-    
+    *pdwID = piProcInfo.dwProcessId;
+
     if (applType == APPL_DOS) {
 	WaitForSingleObject(hProcess, 50);
     }

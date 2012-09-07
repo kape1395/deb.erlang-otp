@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 1999-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1999-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -419,10 +419,8 @@ check_process_code(Process* rp, Module* modp)
     Uint mod_size;
     BeamInstr* end;
     Eterm* sp;
-#ifndef HYBRID /* FIND ME! */
     struct erl_off_heap_header* oh;
     int done_gc = 0;
-#endif
 
 #define INSIDE(a) (start <= (a) && (a) < end)
 
@@ -481,7 +479,6 @@ check_process_code(Process* rp, Module* modp)
      * See if there are funs that refer to the old version of the module.
      */
 
-#ifndef HYBRID /* FIND ME! */
  rescan:
     for (oh = MSO(rp).first; oh; oh = oh->next) {
 	if (thing_subtag(oh->thing_word) == FUN_SUBTAG) {
@@ -507,7 +504,6 @@ check_process_code(Process* rp, Module* modp)
 	    }
 	}
     }
-#endif
 
     /*
      * See if there are constants inside the module referenced by the process.

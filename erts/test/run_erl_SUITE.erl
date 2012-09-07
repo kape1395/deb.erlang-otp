@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2005-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2005-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -250,7 +250,7 @@ defunct_2(Config, Perl) ->
     ?line ok = file:make_dir(LogDir),
     ?line Pipe = LogDir ++ "/",
     ?line RunErl = os:find_executable(run_erl),
-    ?line Cmd = Perl ++ " " ++ RunErlTest ++ " " ++ RunErl ++ " " ++
+    ?line Cmd = Perl ++ " " ++ RunErlTest ++ " \"" ++ RunErl ++ "\" " ++
 	Defuncter ++ " " ++ Pipe ++ " " ++ LogDir,
     ?line io:format("~p", [Cmd]),
     ?line Res = os:cmd(Cmd),

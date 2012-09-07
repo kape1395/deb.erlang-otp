@@ -19,7 +19,7 @@
 
 {application, reltool,
  [{description, "Reltool the release management tool"},
-  {vsn, "0.6"},
+  {vsn, "0.6.1"},
   {modules,
    [
     reltool,

@@ -275,8 +275,8 @@
 
 -type tag()  :: ?atom_tag | ?binary_tag | ?function_tag | ?identifier_tag
               | ?list_tag | ?matchstate_tag | ?nil_tag | ?number_tag
-              | ?opaque_tag | ?product_tag | ?tuple_tag | ?tuple_set_tag
-              | ?union_tag | ?var_tag.
+              | ?opaque_tag | ?product_tag | ?remote_tag
+              | ?tuple_tag | ?tuple_set_tag | ?union_tag | ?var_tag.
 
 -define(float_qual,     float).
 -define(integer_qual,   integer).
@@ -2318,10 +2318,14 @@ t_inf(?product(_), _, _Mode) ->
   ?none;
 t_inf(_, ?product(_), _Mode) ->
   ?none;
-t_inf(?tuple(?any, ?any, ?any), ?tuple(_, _, _) = T, _Mode) -> T;
-t_inf(?tuple(_, _, _) = T, ?tuple(?any, ?any, ?any), _Mode) -> T;
-t_inf(?tuple(?any, ?any, ?any), ?tuple_set(_) = T, _Mode) -> T;
-t_inf(?tuple_set(_) = T, ?tuple(?any, ?any, ?any), _Mode) -> T;
+t_inf(?tuple(?any, ?any, ?any), ?tuple(_, _, _) = T, _Mode) ->
+  subst_all_vars_to_any(T);
+t_inf(?tuple(_, _, _) = T, ?tuple(?any, ?any, ?any), _Mode) ->
+  subst_all_vars_to_any(T);
+t_inf(?tuple(?any, ?any, ?any), ?tuple_set(_) = T, _Mode) ->
+  subst_all_vars_to_any(T);
+t_inf(?tuple_set(_) = T, ?tuple(?any, ?any, ?any), _Mode) ->
+  subst_all_vars_to_any(T);
 t_inf(?tuple(Elements1, Arity, _Tag1), ?tuple(Elements2, Arity, _Tag2), Mode) ->
   case t_inf_lists_strict(Elements1, Elements2, Mode) of
     bottom -> ?none;
@@ -2555,8 +2559,8 @@ t_subst_dict(?list(Contents, Termination, Size), Dict) ->
 	?nil -> ?list(NewContents, ?nil, Size);
 	?any -> ?list(NewContents, ?any, Size);
 	Other ->
-	  ?list(NewContents, NewTermination, _) = t_cons(NewContents, Other),
-	  ?list(NewContents, NewTermination, Size)
+	  ?list(NewContents2, NewTermination, _) = t_cons(NewContents, Other),
+	  ?list(NewContents2, NewTermination, Size)
       end
   end;
 t_subst_dict(?function(Domain, Range), Dict) ->
@@ -2597,8 +2601,8 @@ t_subst_aux(?list(Contents, Termination, Size), VarMap) ->
 	?nil -> ?list(NewContents, ?nil, Size);
 	?any -> ?list(NewContents, ?any, Size);
 	Other ->
-	  ?list(NewContents, NewTermination, _) = t_cons(NewContents, Other),
-	  ?list(NewContents, NewTermination, Size)
+	  ?list(NewContents2, NewTermination, _) = t_cons(NewContents, Other),
+	  ?list(NewContents2, NewTermination, Size)
       end
   end;
 t_subst_aux(?function(Domain, Range), VarMap) ->
@@ -3186,8 +3190,8 @@ t_abstract_records(?list(Contents, Termination, Size), RecDict) ->
 	?nil -> ?list(NewContents, ?nil, Size);
 	?any -> ?list(NewContents, ?any, Size);
 	Other ->
-	  ?list(NewContents, NewTermination, _) = t_cons(NewContents, Other),
-	  ?list(NewContents, NewTermination, Size)
+	  ?list(NewContents2, NewTermination, _) = t_cons(NewContents, Other),
+	  ?list(NewContents2, NewTermination, Size)
       end
   end;
 t_abstract_records(?function(Domain, Range), RecDict) ->

@@ -2,7 +2,7 @@
 %%-----------------------------------------------------------------------
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2006-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2006-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -43,7 +43,8 @@
 	 pp_hook/0,
 	 process_record_remote_types/1,
          sets_filter/2,
-	 src_compiler_opts/0
+	 src_compiler_opts/0,
+	 parallelism/0
 	]).
 
 -include("dialyzer.hrl").
@@ -536,3 +537,12 @@ pp_unit(Unit, Ctxt, Cont) ->
 pp_atom(Atom) ->
   String = atom_to_list(cerl:atom_val(Atom)),
   prettypr:text(String).
+
+%%------------------------------------------------------------------------------
+
+-spec parallelism() -> integer().
+
+parallelism() ->
+  CPUs = erlang:system_info(logical_processors_available),
+  Schedulers = erlang:system_info(schedulers),
+  min(CPUs, Schedulers).

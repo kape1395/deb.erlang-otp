@@ -2,7 +2,7 @@
 #
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 1996-2009. All Rights Reserved.
+# Copyright Ericsson AB 1996-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -17,7 +17,7 @@
 # 
 # %CopyrightEnd%
 #
-ROOTDIR=%FINAL_ROOTDIR%
+ROOTDIR="%FINAL_ROOTDIR%"
 BINDIR=$ROOTDIR/erts-%VSN%/bin
 EMU=%EMULATOR%%EMULATOR_NUMBER%
 PROGNAME=`echo $0 | sed 's/.*\///'`
@@ -25,4 +25,4 @@ export EMU
 export ROOTDIR
 export BINDIR
 export PROGNAME
-exec $BINDIR/erlexec ${1+"$@"}
+exec "$BINDIR/erlexec" ${1+"$@"}

@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 2001-2011. All Rights Reserved.
+ * Copyright Ericsson AB 2001-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -849,9 +849,6 @@ static Eterm AM_dist_references;
 static Eterm AM_node_references;
 static Eterm AM_system;
 static Eterm AM_timer;
-#ifdef HYBRID
-static Eterm AM_processes;
-#endif
 
 static void setup_reference_table(void);
 static Eterm reference_table_term(Uint **hpp, Uint *szp);
@@ -936,9 +933,6 @@ erts_get_node_and_dist_references(struct process *proc)
 	INIT_AM(node_references);
 	INIT_AM(timer);
 	INIT_AM(system);
-#ifdef HYBRID
-	INIT_AM(processes);
-#endif
 	references_atoms_need_init = 0;
     }
 
@@ -1301,12 +1295,6 @@ setup_reference_table(void)
 		SYSTEM_REF,
 		TUPLE2(&heap[0], AM_system, am_undefined));
 
-#ifdef HYBRID
-    /* Insert Heap */
-    insert_offheap(&erts_global_offheap,
-		   HEAP_REF,
-		   TUPLE2(&heap[0], AM_processes, am_undefined));
-#endif
     UnUseTmpHeapNoproc(3);
 
     /* Insert all processes */

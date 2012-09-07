@@ -27,7 +27,7 @@
 -export([init_tc/3, end_tc/3, end_tc/4, get_suite/2, get_all_cases/1]).
 -export([report/2, warn/1, error_notification/4]).
 
--export([get_logopts/0, format_comment/1, get_html_wrapper/3]).
+-export([get_logopts/0, format_comment/1, get_html_wrapper/4]).
 
 -export([error_in_suite/1, init_per_suite/1, end_per_suite/1,
 	 init_per_group/2, end_per_group/2]).
@@ -72,18 +72,25 @@ init_tc(Mod,Func,Config) ->
 	{Suite,{suite0_failed,_}=Failure} ->
 	    {skip,Failure};
 	_ ->
-	    ct_util:set_testdata({curr_tc,{Suite,Func}}),
+	    ct_util:update_testdata(curr_tc,
+				    fun(undefined) ->
+					    [{Suite,Func}];
+				       (Running) ->
+					    [{Suite,Func}|Running]
+				    end, [create]),
 	    case ct_util:read_suite_data({seq,Suite,Func}) of
 		undefined ->
 		    init_tc1(Mod,Suite,Func,Config);
 		Seq when is_atom(Seq) ->
 		    case ct_util:read_suite_data({seq,Suite,Seq}) of
 			[Func|TCs] ->		% this is the 1st case in Seq
-			    %% make sure no cases in this seq are marked as failed
-			    %% from an earlier execution in the same suite
+			    %% make sure no cases in this seq are
+			    %% marked as failed from an earlier execution 
+			    %% in the same suite
 			    lists:foreach(
 			      fun(TC) ->
-				      ct_util:save_suite_data({seq,Suite,TC},Seq)
+				      ct_util:save_suite_data({seq,Suite,TC},
+							      Seq)
 			      end, TCs);
 			_ ->
 			    ok
@@ -204,20 +211,23 @@ init_tc2(Mod,Suite,Func,SuiteInfo,MergeResult,Config) ->
 			   data={Mod,FuncSpec}}),
 
     case catch configure(MergedInfo,MergedInfo,SuiteInfo,
-			 FuncSpec,Config) of
+			 FuncSpec,[],Config) of
 	{suite0_failed,Reason} ->
-	    ct_util:set_testdata({curr_tc,{Mod,{suite0_failed,{require,Reason}}}}),
+	    ct_util:set_testdata({curr_tc,{Mod,{suite0_failed,
+						{require,Reason}}}}),
 	    {skip,{require_failed_in_suite0,Reason}};
 	{error,Reason} ->
 	    {auto_skip,{require_failed,Reason}};
 	{'EXIT',Reason} ->
 	    {auto_skip,Reason};
-	{ok,Config1} ->
+	{ok,PostInitHook,Config1} ->
 	    case get('$test_server_framework_test') of
 		undefined ->
-		    ct_suite_init(Suite, FuncSpec, Config1);
+		    ct_suite_init(Suite, FuncSpec, PostInitHook, Config1);
 		Fun ->
-		    case Fun(init_tc, Config1) of
+		    PostInitHookResult = do_post_init_hook(PostInitHook,
+							   Config1),
+		    case Fun(init_tc, [PostInitHookResult ++ Config1]) of
 			NewConfig when is_list(NewConfig) ->
 			    {ok,NewConfig};
 			Else ->
@@ -226,13 +236,27 @@ init_tc2(Mod,Suite,Func,SuiteInfo,MergeResult,Config) ->
 	    end
     end.
 
-ct_suite_init(Suite, Func, [Config]) when is_list(Config) ->
+ct_suite_init(Suite, Func, PostInitHook, Config) when is_list(Config) ->
     case ct_hooks:init_tc(Suite, Func, Config) of
 	NewConfig when is_list(NewConfig) ->
-	    {ok, [NewConfig]};
+	    PostInitHookResult = do_post_init_hook(PostInitHook, NewConfig),
+	    {ok, [PostInitHookResult ++ NewConfig]};
 	Else ->
 	    Else
     end.
+
+do_post_init_hook(PostInitHook, Config) ->
+    lists:flatmap(fun({Tag,Fun}) ->
+			  case lists:keysearch(Tag,1,Config) of
+			      {value,_} ->
+				  [];
+			      false -> 
+				  case Fun() of
+				      {error,_} -> [];
+				      Result    -> [{Tag,Result}]
+				  end
+			  end
+		  end, PostInitHook).
 
 add_defaults(Mod,Func, GroupPath) ->
     Suite = get_suite_name(Mod, GroupPath),
@@ -453,15 +477,16 @@ timetrap_first([],Info,[]) ->
 timetrap_first([],Info,Found) ->
     ?rev(Found) ++ ?rev(Info).
 
-configure([{require,Required}|Rest],Info,SuiteInfo,Scope,Config) ->
+configure([{require,Required}|Rest],
+	  Info,SuiteInfo,Scope,PostInitHook,Config) ->
     case ct:require(Required) of
 	ok ->
-	    configure(Rest,Info,SuiteInfo,Scope,Config);
+	    configure(Rest,Info,SuiteInfo,Scope,PostInitHook,Config);
 	Error = {error,Reason} ->
 	    case required_default('_UNDEF',Required,Info,
 				  SuiteInfo,Scope) of
 		ok ->
-		    configure(Rest,Info,SuiteInfo,Scope,Config);
+		    configure(Rest,Info,SuiteInfo,Scope,PostInitHook,Config);
 		_ ->
 		    case lists:keymember(Required,2,SuiteInfo) of
 			true ->
@@ -471,14 +496,15 @@ configure([{require,Required}|Rest],Info,SuiteInfo,Scope,Config) ->
 		    end
 	    end
     end;
-configure([{require,Name,Required}|Rest],Info,SuiteInfo,Scope,Config) ->
+configure([{require,Name,Required}|Rest],
+	  Info,SuiteInfo,Scope,PostInitHook,Config) ->
     case ct:require(Name,Required) of
 	ok ->
-	    configure(Rest,Info,SuiteInfo,Scope,Config);
+	    configure(Rest,Info,SuiteInfo,Scope,PostInitHook,Config);
 	Error = {error,Reason} ->
 	    case required_default(Name,Required,Info,SuiteInfo,Scope) of
 		ok ->
-		    configure(Rest,Info,SuiteInfo,Scope,Config);
+		    configure(Rest,Info,SuiteInfo,Scope,PostInitHook,Config);
 		_ ->
 		    case lists:keymember(Name,2,SuiteInfo) of
 			true -> 
@@ -488,17 +514,24 @@ configure([{require,Name,Required}|Rest],Info,SuiteInfo,Scope,Config) ->
 		    end
 	    end
     end;
-configure([{timetrap,off}|Rest],Info,SuiteInfo,Scope,Config) ->
-    configure(Rest,Info,SuiteInfo,Scope,Config);
-configure([{timetrap,Time}|Rest],Info,SuiteInfo,Scope,Config) ->
-    Dog = test_server:timetrap(Time),
-    configure(Rest,Info,SuiteInfo,Scope,[{watchdog,Dog}|Config]);
-configure([{ct_hooks, Hook} | Rest], Info, SuiteInfo, Scope, Config) ->
-    configure(Rest, Info, SuiteInfo, Scope, [{ct_hooks, Hook} | Config]);
-configure([_|Rest],Info,SuiteInfo,Scope,Config) ->
-    configure(Rest,Info,SuiteInfo,Scope,Config);
-configure([],_,_,_,Config) ->
-    {ok,[Config]}.
+configure([{timetrap,off}|Rest],Info,SuiteInfo,Scope,PostInitHook,Config) ->
+    configure(Rest,Info,SuiteInfo,Scope,PostInitHook,Config);
+configure([{timetrap,Time}|Rest],Info,SuiteInfo,Scope,PostInitHook,Config) ->
+    PostInitHook1 = 
+	[{watchdog,fun() -> case test_server:get_timetrap_info() of
+				undefined ->
+				    test_server:timetrap(Time);
+				_ ->
+				    {error,already_set}
+			    end
+		   end} | PostInitHook],
+    configure(Rest,Info,SuiteInfo,Scope,PostInitHook1,Config);
+configure([{ct_hooks,Hook}|Rest],Info,SuiteInfo,Scope,PostInitHook,Config) ->
+    configure(Rest,Info,SuiteInfo,Scope,PostInitHook,[{ct_hooks,Hook}|Config]);
+configure([_|Rest],Info,SuiteInfo,Scope,PostInitHook,Config) ->
+    configure(Rest,Info,SuiteInfo,Scope,PostInitHook,Config);
+configure([],_,_,_,PostInitHook,Config) ->
+    {ok,PostInitHook,Config}.
 
 %% the require element in Info may come from suite/0 and
 %% should be scoped 'suite', or come from the group info
@@ -562,10 +595,8 @@ end_tc(Mod,Func,TCPid,Result,Args,Return) ->
     %% in case Mod == ct_framework, lookup the suite name
     Suite = get_suite_name(Mod, Args),
 
-    case lists:keysearch(watchdog,1,Args) of
-	{value,{watchdog,Dog}} -> test_server:timetrap_cancel(Dog);
-	false -> ok
-    end,
+    test_server:timetrap_cancel(),
+
     %% save the testcase process pid so that it can be used
     %% to look up the attached trace window later
     case ct_util:get_testdata(interpret) of
@@ -633,7 +664,22 @@ end_tc(Mod,Func,TCPid,Result,Args,Return) ->
     end,
 
     ct_util:reset_silent_connections(),
-    
+
+    %% reset the curr_tc state, or delete this TC from the list of
+    %% executing cases (if in a parallel group)
+    ClearCurrTC = fun(Running = [_,_|_]) ->
+			  lists:keydelete(Func,2,Running);
+		     ({_,{suite0_failed,_}}) ->
+			  undefined;
+		     ([{_,CurrTC}]) when CurrTC == Func ->
+			  undefined;
+		     (undefined) ->
+			  undefined;
+		     (Unexpected) ->
+			  exit({error,{reset_curr_tc,{Mod,Func},Unexpected}})
+		  end,
+    ct_util:update_testdata(curr_tc,ClearCurrTC),
+
     case FinalResult of
 	{skip,{sequence_failed,_,_}} ->
 	    %% ct_logs:init_tc is never called for a skipped test case
@@ -1634,5 +1680,5 @@ format_comment(Comment) ->
 
 %%%-----------------------------------------------------------------
 %%% @spec get_html_wrapper(TestName, PrintLabel, Cwd) -> Header
-get_html_wrapper(TestName, PrintLabel, Cwd) ->
-    ct_logs:get_ts_html_wrapper(TestName, PrintLabel, Cwd).
+get_html_wrapper(TestName, PrintLabel, Cwd, TableCols) ->
+    ct_logs:get_ts_html_wrapper(TestName, PrintLabel, Cwd, TableCols).

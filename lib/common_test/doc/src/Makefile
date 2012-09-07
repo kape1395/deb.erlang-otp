@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 2003-2011. All Rights Reserved.
+# Copyright Ericsson AB 2003-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -46,7 +46,8 @@ CT_MODULES = \
 	ct_rpc \
 	ct_snmp \
 	unix_telnet \
-	ct_slave
+	ct_slave \
+	ct_netconfc
 
 CT_XML_FILES = $(CT_MODULES:=.xml)
 
@@ -123,7 +124,7 @@ $(HTMLDIR)/%.gif: %.gif
 
 docs: pdf html man
 
-$(CT_XML_FILES): 
+$(CT_XML_FILES): %.xml: ../../src/%.erl
 	escript $(DOCGEN)/priv/bin/xml_from_edoc.escript -preprocess true -i $(XMERL_DIR)/include \
 		-i ../../../test_server/include -i  ../../include \
 		-i ../../../../erts/lib/kernel/include -i ../../../../lib/kernel/include \
@@ -158,18 +159,18 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 
 release_docs_spec: docs
-	$(INSTALL_DIR) $(RELSYSDIR)/doc/pdf
-	$(INSTALL_DATA) $(TOP_PDF_FILE) $(RELSYSDIR)/doc/pdf
-	$(INSTALL_DIR) $(RELSYSDIR)/doc/html
+	$(INSTALL_DIR) "$(RELSYSDIR)/doc/pdf"
+	$(INSTALL_DATA) $(TOP_PDF_FILE) "$(RELSYSDIR)/doc/pdf"
+	$(INSTALL_DIR) "$(RELSYSDIR)/doc/html"
 	$(INSTALL_DATA) $(HTMLDIR)/* \
-		$(RELSYSDIR)/doc/html
-	$(INSTALL_DATA) $(INFO_FILE) $(RELSYSDIR)
-	$(INSTALL_DIR) $(RELEASE_PATH)/man/man1
-	$(INSTALL_DATA) $(MAN1DIR)/* $(RELEASE_PATH)/man/man1
-	$(INSTALL_DIR) $(RELEASE_PATH)/man/man3
-	$(INSTALL_DATA) $(MAN3DIR)/* $(RELEASE_PATH)/man/man3
-	$(INSTALL_DIR) $(RELEASE_PATH)/man/man6
-	$(INSTALL_DATA) $(MAN6DIR)/* $(RELEASE_PATH)/man/man6
+		"$(RELSYSDIR)/doc/html"
+	$(INSTALL_DATA) $(INFO_FILE) "$(RELSYSDIR)"
+	$(INSTALL_DIR) "$(RELEASE_PATH)/man/man1"
+	$(INSTALL_DATA) $(MAN1DIR)/* "$(RELEASE_PATH)/man/man1"
+	$(INSTALL_DIR) "$(RELEASE_PATH)/man/man3"
+	$(INSTALL_DATA) $(MAN3DIR)/* "$(RELEASE_PATH)/man/man3"
+	$(INSTALL_DIR) "$(RELEASE_PATH)/man/man6"
+	$(INSTALL_DATA) $(MAN6DIR)/* "$(RELEASE_PATH)/man/man6"
 
 release_spec:
 

@@ -501,7 +501,7 @@ sticky_dir(doc) -> ["Test that a module with the same name as a module in ",
 		    "a sticky directory cannot be loaded."];
 sticky_dir(Config) when is_list(Config) ->
     MyDir=filename:dirname(code:which(?MODULE)),
-    ?line {ok, Node}=?t:start_node(sticky_dir, slave,[{args, "-pa "++MyDir}]),
+    ?line {ok, Node}=?t:start_node(sticky_dir, slave,[{args, "-pa \""++MyDir++"\""}]),
     File=filename:join([?config(data_dir, Config), "calendar"]),
     ?line Ret=rpc:call(Node, ?MODULE, sticky_compiler, [File]),
     case Ret of
@@ -822,7 +822,7 @@ load_cached(Config) when is_list(Config) ->
     ?line WD = filename:dirname(code:which(?MODULE)),
     ?line {ok,Node} = 
 	?t:start_node(code_cache_node, peer, [{args,
-					       "-pa " ++ WD},
+					       "-pa \"" ++ WD ++ "\""},
 					      {erl, [this]}]),
     CCTabCreated = fun(Tab) ->
 			   case ets:info(Tab, name) of
@@ -907,7 +907,7 @@ add_and_rehash(Config) when is_list(Config) ->
     ?line WD = filename:dirname(code:which(?MODULE)),
     ?line {ok,Node} = 
 	?t:start_node(code_cache_node, peer, [{args,
-					       "-pa " ++ WD},
+					       "-pa \"" ++ WD ++ "\""},
 					      {erl, [this]}]),
     CCTabCreated = fun(Tab) ->
 			   case ets:info(Tab, name) of
@@ -1550,7 +1550,8 @@ native_early_modules_1(Architecture) ->
         true ->
             ?line true = lists:all(fun code:is_module_native/1,
 				   [ets,file,filename,gb_sets,gb_trees,
-				    hipe_unified_loader,lists,os,packages]),
+				    %%hipe_unified_loader, no_native as workaround
+				    lists,os,packages]),
             ok
     end.
 

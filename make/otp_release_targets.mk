@@ -1,7 +1,7 @@
 # 
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 1997-2011. All Rights Reserved.
+# Copyright Ericsson AB 1997-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -110,12 +110,12 @@ endif
 ifeq ($(TESTROOT),)
 
 release release_docs release_tests release_html:
-	$(MAKE) $(MFLAGS) RELEASE_PATH=$(ERL_TOP)/release/$(TARGET) \
+	$(MAKE) $(MFLAGS) RELEASE_PATH="$(ERL_TOP)/release/$(TARGET)" \
 		$(TARGET_MAKEFILE)  $@_spec
 
 else
 
 release release_docs release_tests release_html:
-	$(MAKE) $(MFLAGS) RELEASE_PATH=$(TESTROOT) $(TARGET_MAKEFILE)  $@_spec 
+	$(MAKE) $(MFLAGS) RELEASE_PATH="$(TESTROOT)" $(TARGET_MAKEFILE)  $@_spec 
 
 endif

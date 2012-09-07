@@ -1889,7 +1889,9 @@ enc_term(ErtsAtomCacheMap *acmp, Eterm obj, byte* ep, Uint32 dflags,
 			    *ep++ = BINARY_INTERNAL_REF;
 			}
 			if (pb->flags) {
+			    char* before_realloc = pb->val->orig_bytes; 
 			    erts_emasculate_writable_binary(pb);
+			    bytes += (pb->val->orig_bytes - before_realloc);
 			}
 			erts_refc_inc(&pb->val->refc, 2);
 
@@ -2626,14 +2628,12 @@ dec_term_atom_common:
 		}
 		old_uniq = unsigned_val(temp);
 
-#ifndef HYBRID /* FIND ME! */
 		/*
 		 * It is safe to link the fun into the fun list only when
 		 * no more validity tests can fail.
 		 */
 		funp->next = off_heap->first;
 		off_heap->first = (struct erl_off_heap_header*)funp;
-#endif
 
 		funp->fe = erts_put_fun_entry2(module, old_uniq, old_index,
 					       uniq, index, arity);
@@ -2704,14 +2704,12 @@ dec_term_atom_common:
 		    goto error;
 		}
 		
-#ifndef HYBRID /* FIND ME! */
 		/*
 		 * It is safe to link the fun into the fun list only when
 		 * no more validity tests can fail.
 		 */
 		funp->next = off_heap->first;
 		off_heap->first = (struct erl_off_heap_header*)funp;
-#endif
 		old_uniq = unsigned_val(temp);
 
 		funp->fe = erts_put_fun_entry(module, old_uniq, old_index);

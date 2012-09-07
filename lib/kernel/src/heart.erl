@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1996-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -17,6 +17,10 @@
 %% %CopyrightEnd%
 %%
 -module(heart). 
+
+-compile(no_native).
+% 'no_native' as part of a crude fix to make init:restart/0 work by clearing
+% all hipe inter-module information (hipe_mfa_info's in hipe_bif0.c).
 
 %%%--------------------------------------------------------------------
 %%% This is a rewrite of pre_heart from BS.3.

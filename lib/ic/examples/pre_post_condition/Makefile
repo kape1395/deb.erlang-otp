@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 1999-2011. All Rights Reserved.
+# Copyright Ericsson AB 1999-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -124,8 +124,8 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 
 release_spec: opt
-	$(INSTALL_DIR) $(RELSYSDIR)/examples/pre_post_condition
-	$(INSTALL_DATA) $(ERL_FILES) $(IDL_FILES) $(TXT_FILES) $(RELSYSDIR)/examples/pre_post_condition
+	$(INSTALL_DIR) "$(RELSYSDIR)/examples/pre_post_condition"
+	$(INSTALL_DATA) $(ERL_FILES) $(IDL_FILES) $(TXT_FILES) "$(RELSYSDIR)/examples/pre_post_condition"
 
 
 release_docs_spec:

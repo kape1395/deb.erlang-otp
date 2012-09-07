@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1999-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1999-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -29,10 +29,17 @@ module({Mod,Exp,Attr,Fs0,Lc}, _Opts) ->
     {ok,{Mod,Exp,Attr,Fs,Lc}}.
 
 function({function,Name,Arity,CLabel,Asm0}) ->
-    Asm1 = beam_utils:live_opt(Asm0),
-    Asm2 = opt(Asm1, [], tdb_new()),
-    Asm = beam_utils:delete_live_annos(Asm2),
-    {function,Name,Arity,CLabel,Asm}.
+    try
+	Asm1 = beam_utils:live_opt(Asm0),
+	Asm2 = opt(Asm1, [], tdb_new()),
+	Asm = beam_utils:delete_live_annos(Asm2),
+	{function,Name,Arity,CLabel,Asm}
+    catch
+	Class:Error ->
+	    Stack = erlang:get_stacktrace(),
+	    io:fwrite("Function: ~w/~w\n", [Name,Arity]),
+	    erlang:raise(Class, Error, Stack)
+    end.
 
 %% opt([Instruction], Accumulator, TypeDb) -> {[Instruction'],TypeDb'}
 %%  Keep track of type information; try to simplify.

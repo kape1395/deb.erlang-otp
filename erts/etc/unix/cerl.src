@@ -2,7 +2,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 2003-2011. All Rights Reserved.
+# Copyright Ericsson AB 2003-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -227,7 +227,7 @@ done
 PATH=$BINDIR:$ROOTDIR/bin:$PATH
 EXEC=$BINDIR/erlexec
 
-PROGNAME="$PROGNAME $cargs"
+PROGNAME="$PROGNAME$cargs"
 EMU="$EMU$TYPE"
 EMU_NAME=`$EXEC -emu_name_exit $eeargs`
 
@@ -302,7 +302,7 @@ else
     # Set annotation level for gdb in emacs 22 and higher.
     emacs_major=`$EMACS --version | head -1 | sed 's,^[^0-9]*\([0-9]*\).*,\1,g'`
     if [ '!' -z "$emacs_major" -a $emacs_major -gt 21 ]; then
-	GDBARGS="--annotate=3 "
+	GDBARGS="--annotate=1 "
     fi
     gdbcmd="$gdbcmd $GDBBP \
             (insert-string \"source $ROOTDIR/erts/etc/unix/etp-commands\") \

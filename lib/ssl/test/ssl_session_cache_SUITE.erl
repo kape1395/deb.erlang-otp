@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2010-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2010-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -49,6 +49,7 @@
 %%--------------------------------------------------------------------
 init_per_suite(Config0) ->
     Dog = ssl_test_lib:timetrap(?LONG_TIMEOUT *2),
+    catch crypto:stop(),
     try crypto:start() of
 	ok ->
 	    application:start(public_key),

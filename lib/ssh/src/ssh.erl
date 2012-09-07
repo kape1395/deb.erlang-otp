@@ -91,10 +91,8 @@ do_connect(Host, Port, SocketOptions, SshOptions, Timeout, DisableIpv6) ->
  	{ok, ConnectionSup} ->
 	    {ok, Manager} = 
 		ssh_connection_sup:connection_manager(ConnectionSup),
-	    MRef = erlang:monitor(process, Manager),
 	    receive 
 		{Manager, is_connected} ->
-		    do_demonitor(MRef, Manager),
 		    {ok, Manager};
 		%% When the connection fails 
 		%% ssh_connection_sup:connection_manager
@@ -102,30 +100,13 @@ do_connect(Host, Port, SocketOptions, SshOptions, Timeout, DisableIpv6) ->
 		%% could allready have terminated, so we will not
 		%% match the Manager in this case
 		{_, not_connected, {error, econnrefused}} when DisableIpv6 == false ->
-		    do_demonitor(MRef, Manager),
 		    do_connect(Host, Port, proplists:delete(inet6, SocketOptions), 
 			    SshOptions, Timeout, true);
 		{_, not_connected, {error, Reason}} ->
-		    do_demonitor(MRef, Manager),
 		    {error, Reason};
 		{_, not_connected, Other} ->
-		    do_demonitor(MRef, Manager),
-		    {error, Other};
-		{'DOWN', MRef, _, Manager, Reason} when is_pid(Manager) ->
-		    error_logger:warning_report([{ssh, connect},
-						 {diagnose,
-						  "Connection was closed before properly set up."},
-						 {host, Host},
-						 {port, Port},
-						 {reason, Reason}]),
-		    receive %% Clear EXIT message from queue
-			{'EXIT', Manager, _What} -> 
-			    {error, channel_closed}
-		    after 0 ->
-			    {error, channel_closed}
-		    end
+		    {error, Other}
 	    after Timeout  ->
-		    do_demonitor(MRef, Manager),
 		    ssh_connection_manager:stop(Manager),
 		    {error, timeout}
 	    end
@@ -133,16 +114,6 @@ do_connect(Host, Port, SocketOptions, SshOptions, Timeout, DisableIpv6) ->
 	exit:{noproc, _} ->
  	    {error, ssh_not_started}
     end.
-
-do_demonitor(MRef, Manager) ->
-    erlang:demonitor(MRef),
-    receive 
-	{'DOWN', MRef, _, Manager, _} -> 
-	    ok
-    after 0 -> 
-	    ok
-    end.
-
 
 %%--------------------------------------------------------------------
 %% Function: close(ConnectionRef) -> ok
@@ -346,8 +317,9 @@ handle_option([{role, _} = Opt | Rest], SocketOptions, SshOptions) ->
     handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
 handle_option([{compression, _} = Opt | Rest], SocketOptions, SshOptions) ->
     handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
-handle_option([{allow_user_interaction, _} = Opt | Rest], SocketOptions, SshOptions) ->
-    handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
+%%Backwards compatibility
+handle_option([{allow_user_interaction, Value}  | Rest], SocketOptions, SshOptions) ->
+    handle_option(Rest, SocketOptions, [handle_ssh_option({user_interaction, Value}) | SshOptions]);
 handle_option([{infofun, _} = Opt | Rest],SocketOptions, SshOptions) ->
     handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
 handle_option([{connectfun, _} = Opt | Rest], SocketOptions, SshOptions) ->
@@ -365,6 +337,10 @@ handle_option([{subsystems, _} = Opt | Rest], SocketOptions, SshOptions) ->
 handle_option([{ssh_cli, _} = Opt | Rest], SocketOptions, SshOptions) ->
     handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
 handle_option([{shell, _} = Opt | Rest], SocketOptions, SshOptions) ->
+    handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
+handle_option([{exec, _} = Opt | Rest], SocketOptions, SshOptions) ->
+    handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
+handle_option([{auth_methods, _} = Opt | Rest], SocketOptions, SshOptions) ->
     handle_option(Rest, SocketOptions, [handle_ssh_option(Opt) | SshOptions]);
 handle_option([Opt | Rest], SocketOptions, SshOptions) ->
     handle_option(Rest, [handle_inet_option(Opt) | SocketOptions], SshOptions).
@@ -401,8 +377,11 @@ handle_ssh_option({key_cb, Value} = Opt)  when is_atom(Value) ->
     Opt;
 handle_ssh_option({compression, Value} = Opt) when is_atom(Value) ->
     Opt;
-handle_ssh_option({allow_user_interaction, Value} = Opt) when Value == true;
-							      Value == false ->
+handle_ssh_option({exec, {Module, Function, _}} = Opt) when is_atom(Module), 
+							    is_atom(Function) ->
+
+    Opt;
+handle_ssh_option({auth_methods, Value} = Opt)  when is_list(Value) ->
     Opt;
 handle_ssh_option({infofun, Value} = Opt)  when is_function(Value) ->
     Opt;
@@ -412,11 +391,12 @@ handle_ssh_option({disconnectfun , Value} = Opt) when is_function(Value) ->
     Opt;
 handle_ssh_option({failfun, Value} = Opt) when is_function(Value) ->
     Opt;
-handle_ssh_option({ip_v6_disabled, Value} = Opt) when is_function(Value) ->
+handle_ssh_option({ip_v6_disabled, Value} = Opt) when Value == true;
+						      Value == false ->
     Opt;
 handle_ssh_option({transport, {Protocol, Cb, ClosTag}} = Opt) when is_atom(Protocol),
-							     is_atom(Cb),
-							     is_atom(ClosTag) ->
+								   is_atom(Cb),
+								   is_atom(ClosTag) ->
     Opt;
 handle_ssh_option({subsystems, Value} = Opt) when is_list(Value) ->
     Opt;
@@ -495,4 +475,3 @@ verify_data(Data, Signature, Algorithm) when is_binary(Data), is_binary(Signatur
 	Error ->
 	    Error
     end.
-

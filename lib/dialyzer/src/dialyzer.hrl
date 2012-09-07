@@ -2,7 +2,7 @@
 %%%
 %%% %CopyrightBegin%
 %%%
-%%% Copyright Ericsson AB 2006-2011. All Rights Reserved.
+%%% Copyright Ericsson AB 2006-2012. All Rights Reserved.
 %%%
 %%% The contents of this file are subject to the Erlang Public License,
 %%% Version 1.1, (the "License"); you may not use this file except in
@@ -110,6 +110,8 @@
 -type label()	      :: non_neg_integer().
 -type rep_mode()      :: 'quiet' | 'normal' | 'verbose'.
 -type start_from()    :: 'byte_code' | 'src_code'.
+-type mfa_or_funlbl() :: label() | mfa().
+-type solver()        :: 'v1' | 'v2'.
 
 %%--------------------------------------------------------------------
 %% Record declarations used by various files
@@ -126,11 +128,15 @@
 		   use_contracts  = true           :: boolean(),
 		   race_detection = false	   :: boolean(),
 		   behaviours_chk = false          :: boolean(),
-		   callgraph_file = ""             :: file:filename()}).
+		   timing         = false          :: boolean() | 'debug',
+		   timing_server             :: dialyzer_timing:timing_server(),
+		   callgraph_file = ""             :: file:filename(),
+                   solvers                         :: [solver()]}).
 
 -record(options, {files           = []		   :: [file:filename()],
 		  files_rec       = []		   :: [file:filename()],
 		  analysis_type   = succ_typings   :: anal_type1(),
+		  timing          = false          :: boolean() | 'debug',
 		  defines         = []		   :: [dial_define()],
 		  from            = byte_code	   :: start_from(),
 		  get_warnings    = maybe          :: boolean() | 'maybe',
@@ -145,10 +151,20 @@
 		  output_format   = formatted      :: format(),
 		  filename_opt	  = basename       :: fopt(),
 		  callgraph_file  = ""             :: file:filename(),
-		  check_plt       = true           :: boolean()}).
+		  check_plt       = true           :: boolean(),
+                  solvers         = []             :: [solver()]}).
 
 -record(contract, {contracts	  = []		   :: [contract_pair()],
 		   args		  = []		   :: [erl_types:erl_type()],
 		   forms	  = []		   :: [{_, _}]}).
 
 %%--------------------------------------------------------------------
+
+-define(timing(Server, Msg, Var, Expr),
+	begin
+	    dialyzer_timing:start_stamp(Server, Msg),
+	    Var = Expr,
+	    dialyzer_timing:end_stamp(Server),
+	    Var
+	end).
+-define(timing(Server, Msg, Expr),?timing(Server, Msg, _T, Expr)).

@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 1997-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1997-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -569,7 +569,7 @@ FrameWndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         return 1;
     case WM_SETFOCUS :
         CreateCaret(hClientWnd, NULL, cxChar, cyChar);
-        SetCaretPos(GetXFromCurrentY(GetDC(hwnd),0,cur_x), (cur_y-iVscrollPos)*cyChar);
+        SetCaretPos(GetXFromCurrentY(GetDC(hClientWnd),iHscrollPos,cur_x), (cur_y-iVscrollPos)*cyChar);
         ShowCaret(hClientWnd);
         return 0;
     case WM_KILLFOCUS:

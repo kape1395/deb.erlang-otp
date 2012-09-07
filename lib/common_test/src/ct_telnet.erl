@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2003-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2003-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -155,6 +155,8 @@ open(KeyOrName,ConnType,TargetMod) ->
 %%% <p><code>TargetMod</code> is a module which exports the functions
 %%% <code>connect(Ip,Port,KeepAlive,Extra)</code> and <code>get_prompt_regexp()</code>
 %%% for the given <code>TargetType</code> (e.g. <code>unix_telnet</code>).</p>
+%%%
+%%% @see ct:require/2
 open(KeyOrName,ConnType,TargetMod,Extra) ->
     case ct:get_config({KeyOrName,ConnType}) of
 	undefined ->

@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2006-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2006-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -189,6 +189,15 @@ silly_coverage(Config) when is_list(Config) ->
 		     {func_info,{atom,?MODULE},{atom,foo},0},
 		     {label,2}|non_proper_list]}],99},
     ?line expect_error(fun() -> beam_block:module(BlockInput, []) end),
+
+    %% beam_type
+    TypeInput = {?MODULE,[{foo,0}],[],
+		   [{function,foo,0,2,
+		     [{label,1},
+		      {line,loc},
+		      {func_info,{atom,?MODULE},{atom,foo},0},
+		      {label,2}|non_proper_list]}],99},
+    expect_error(fun() -> beam_type:module(TypeInput, []) end),
 
     %% beam_except
     ExceptInput = {?MODULE,[{foo,0}],[],

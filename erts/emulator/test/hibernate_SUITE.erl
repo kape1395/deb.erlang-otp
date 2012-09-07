@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 2003-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2003-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -67,10 +67,7 @@ end_per_testcase(_Func, Config) ->
 basic(Config) when is_list(Config) ->
     Ref = make_ref(),
     Info = {self(),Ref},
-    ExpectedHeapSz = case erlang:system_info(heap_type) of
-			 private -> erts_debug:size([Info]);
-			 hybrid -> erts_debug:size([a|b])
-		     end,
+    ExpectedHeapSz = erts_debug:size([Info]),
     ?line Child = spawn_link(fun() -> basic_hibernator(Info) end),
     ?line hibernate_wake_up(100, ExpectedHeapSz, Child),
     ?line Child ! please_quit_now,
@@ -166,10 +163,7 @@ whats_up_calc(A1, A2, A3, A4, A5, A6, A7, A8, A9, Acc) ->
 dynamic_call(Config) when is_list(Config) ->
     Ref = make_ref(),
     Info = {self(),Ref},
-    ExpectedHeapSz = case erlang:system_info(heap_type) of
-			 private -> erts_debug:size([Info]);
-			 hybrid -> erts_debug:size([a|b])
-		     end,
+    ExpectedHeapSz = erts_debug:size([Info]),
     ?line Child = spawn_link(fun() -> ?MODULE:dynamic_call_hibernator(Info, hibernate) end),
     ?line hibernate_wake_up(100, ExpectedHeapSz, Child),
     ?line Child ! please_quit_now,

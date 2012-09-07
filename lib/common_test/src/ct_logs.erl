@@ -28,23 +28,25 @@
 
 -module(ct_logs).
 
--export([init/1,close/2,init_tc/1,end_tc/1]).
--export([get_log_dir/0,get_log_dir/1]).
--export([log/3,start_log/1,cont_log/2,end_log/0]).
--export([set_stylesheet/2,clear_stylesheet/1]).
--export([add_external_logs/1,add_link/3]).
+-export([init/2, close/2, init_tc/1, end_tc/1]).
+-export([get_log_dir/0, get_log_dir/1]).
+-export([log/3, start_log/1, cont_log/2, end_log/0]).
+-export([set_stylesheet/2, clear_stylesheet/1]).
+-export([add_external_logs/1, add_link/3]).
 -export([make_last_run_index/0]).
 -export([make_all_suites_index/1,make_all_runs_index/1]).
--export([get_ts_html_wrapper/3]).
--export([xhtml/2, locate_default_css_file/0, make_relative/1]).
+-export([get_ts_html_wrapper/4]).
+-export([xhtml/2, locate_priv_file/1, make_relative/1]).
+-export([insert_javascript/1]).
 
 %% Logging stuff directly from testcase
--export([tc_log/3,tc_log/4,tc_log_async/3,tc_print/3,tc_pal/3,ct_log/3,
-	 basic_html/0]).
+-export([tc_log/3, tc_log/4, tc_log_async/3, tc_print/3, tc_print/4,
+	 tc_pal/3, tc_pal/4, ct_log/3, basic_html/0]).
 
 %% Simulate logger process for use without ct environment running
 -export([simulate/0]).
 
+-include("ct.hrl").
 -include("ct_event.hrl").
 -include("ct_util.hrl").
 -include_lib("kernel/include/file.hrl").
@@ -56,7 +58,6 @@
 -define(all_runs_name, "all_runs.html").
 -define(index_name, "index.html").
 -define(totals_name, "totals.info").
--define(css_default, "ct_default.css").
 
 -define(table_color1,"#ADD8E6").
 -define(table_color2,"#E4F0FE").
@@ -79,9 +80,9 @@
 %%% started. A new directory named ct_run.&lt;timestamp&gt; is created
 %%% and all logs are stored under this directory.</p>
 %%%
-init(Mode) ->
+init(Mode, Verbosity) ->
     Self = self(),
-    Pid = spawn_link(fun() -> logger(Self,Mode) end),
+    Pid = spawn_link(fun() -> logger(Self, Mode, Verbosity) end),
     MRef = erlang:monitor(process,Pid),
     receive 
 	{started,Pid,Result} -> 
@@ -240,7 +241,7 @@ end_tc(TCPid) ->
 %%% activity it is. <code>Format</code> and <code>Args</code> is the
 %%% data to log (as in <code>io:format(Format,Args)</code>).</p>
 log(Heading,Format,Args) ->
-    cast({log,sync,self(),group_leader(),
+    cast({log,sync,self(),group_leader(),ct_internal,?MAX_IMPORTANCE,
 	  [{int_header(),[log_timestamp(now()),Heading]},
 	   {Format,Args},
 	   {int_footer(),[]}]}),
@@ -262,7 +263,7 @@ log(Heading,Format,Args) ->
 %%% @see cont_log/2
 %%% @see end_log/0
 start_log(Heading) ->
-    cast({log,sync,self(),group_leader(),
+    cast({log,sync,self(),group_leader(),ct_internal,?MAX_IMPORTANCE,
 	  [{int_header(),[log_timestamp(now()),Heading]}]}),
     ok.
 
@@ -277,7 +278,8 @@ cont_log([],[]) ->
     ok;
 cont_log(Format,Args) ->
     maybe_log_timestamp(),
-    cast({log,sync,self(),group_leader(),[{Format,Args}]}),
+    cast({log,sync,self(),group_leader(),ct_internal,?MAX_IMPORTANCE,
+	  [{Format,Args}]}),
     ok.
 
 %%%-----------------------------------------------------------------
@@ -288,7 +290,8 @@ cont_log(Format,Args) ->
 %%% @see start_log/1
 %%% @see cont_log/2
 end_log() ->
-    cast({log,sync,self(),group_leader(),[{int_footer(), []}]}),
+    cast({log,sync,self(),group_leader(),ct_internal,?MAX_IMPORTANCE,
+	  [{int_footer(), []}]}),
     ok.
     
 
@@ -321,10 +324,16 @@ add_link(Heading,File,Type) ->
 	[filename:join("log_private",File),Type,File]).
 
 
-
 %%%-----------------------------------------------------------------
 %%% @spec tc_log(Category,Format,Args) -> ok
+%%% @equiv tc_log(Category,?STD_IMPORTANCE,Format,Args)
+tc_log(Category,Format,Args) ->
+    tc_log(Category,?STD_IMPORTANCE,Format,Args).
+
+%%%-----------------------------------------------------------------
+%%% @spec tc_log(Category,Importance,Format,Args) -> ok
 %%%      Category = atom()
+%%%      Importance = integer()
 %%%      Format = string()
 %%%      Args = list()
 %%%
@@ -333,19 +342,26 @@ add_link(Heading,File,Type) ->
 %%% <p>This function is called by <code>ct</code> when logging
 %%% stuff directly from a testcase (i.e. not from within the CT
 %%% framework).</p>
-tc_log(Category,Format,Args) ->
-    tc_log(Category,"User",Format,Args).
+tc_log(Category,Importance,Format,Args) ->
+    tc_log(Category,Importance,"User",Format,Args).
 
-tc_log(Category,Printer,Format,Args) ->
-    cast({log,sync,self(),group_leader(),[{div_header(Category,Printer),[]},
-					  {Format,Args},
-					  {div_footer(),[]}]}),
+tc_log(Category,Importance,Printer,Format,Args) ->
+    cast({log,sync,self(),group_leader(),Category,Importance,
+	  [{div_header(Category,Printer),[]},
+	   {Format,Args},
+	   {div_footer(),[]}]}),
     ok.
-
 
 %%%-----------------------------------------------------------------
 %%% @spec tc_log_async(Category,Format,Args) -> ok
+%%% @equiv tc_log_async(Category,?STD_IMPORTANCE,Format,Args)
+tc_log_async(Category,Format,Args) ->
+    tc_log_async(Category,?STD_IMPORTANCE,Format,Args).
+
+%%%-----------------------------------------------------------------
+%%% @spec tc_log_async(Category,Importance,Format,Args) -> ok
 %%%      Category = atom()
+%%%      Importance = integer()
 %%%      Format = string()
 %%%      Args = list()
 %%%
@@ -356,40 +372,66 @@ tc_log(Category,Printer,Format,Args) ->
 %%% to avoid deadlocks when e.g. the hook that handles SASL printouts
 %%% prints to the test case log file at the same time test server
 %%% asks ct_logs for an html wrapper.</p>
-tc_log_async(Category,Format,Args) ->
-    cast({log,async,self(),group_leader(),[{div_header(Category),[]},
-					   {Format,Args},
-					   {div_footer(),[]}]}),
+tc_log_async(Category,Importance,Format,Args) ->
+    cast({log,async,self(),group_leader(),Category,Importance,
+	  [{div_header(Category),[]},
+	   {Format,Args},
+	   {div_footer(),[]}]}),
     ok.
+%%%-----------------------------------------------------------------
+%%% @spec tc_print(Category,Format,Args)
+%%% @equiv tc_print(Category,?STD_IMPORTANCE,Format,Args)
+tc_print(Category,Format,Args) ->
+    tc_print(Category,?STD_IMPORTANCE,Format,Args).
 
 %%%-----------------------------------------------------------------
-%%% @spec tc_print(Category,Format,Args) -> ok
+%%% @spec tc_print(Category,Importance,Format,Args) -> ok
 %%%      Category = atom()
+%%%      Importance = integer()
 %%%      Format = string()
 %%%      Args = list()
 %%%
 %%% @doc Console printout from a testcase. 
 %%%
 %%% <p>This function is called by <code>ct</code> when printing
-%%% stuff a testcase on the user console.</p>
-tc_print(Category,Format,Args) ->
-    Head = get_heading(Category),
-    io:format(user, lists:concat([Head,Format,"\n\n"]), Args),
-    ok.
+%%% stuff from a testcase on the user console.</p>
+tc_print(Category,Importance,Format,Args) ->
+    VLvl = case ct_util:get_testdata({verbosity,Category}) of
+	       undefined -> 
+		   ct_util:get_testdata({verbosity,'$unspecified'});
+	       {error,bad_invocation} ->
+		   ?MAX_VERBOSITY;
+	       Val ->
+		   Val
+	   end,
+    if Importance >= (100-VLvl) ->
+	    Head = get_heading(Category),
+	    io:format(user, lists:concat([Head,Format,"\n\n"]), Args),
+	    ok;
+       true ->
+	    ok
+    end.
 
 get_heading(default) ->
-    io_lib:format("-----------------------------"
+    io_lib:format("\n-----------------------------"
 		  "-----------------------\n~s\n",
 		  [log_timestamp(now())]);
 get_heading(Category) ->
-    io_lib:format("-----------------------------"
+    io_lib:format("\n-----------------------------"
 		  "-----------------------\n~s  ~w\n",
 		  [log_timestamp(now()),Category]).    
     
 
 %%%-----------------------------------------------------------------
 %%% @spec tc_pal(Category,Format,Args) -> ok
+%%% @equiv tc_pal(Category,?STD_IMPORTANCE,Format,Args) -> ok
+tc_pal(Category,Format,Args) ->
+    tc_pal(Category,?STD_IMPORTANCE,Format,Args).
+
+%%%-----------------------------------------------------------------
+%%% @spec tc_pal(Category,Importance,Format,Args) -> ok
 %%%      Category = atom()
+%%%      Importance = integer()
 %%%      Format = string()
 %%%      Args = list()
 %%%
@@ -398,16 +440,17 @@ get_heading(Category) ->
 %%% <p>This function is called by <code>ct</code> when logging
 %%% stuff directly from a testcase. The info is written both in the
 %%% log and on the console.</p>
-tc_pal(Category,Format,Args) ->
-    tc_print(Category,Format,Args),
-    cast({log,sync,self(),group_leader(),[{div_header(Category),[]},
-					  {Format,Args},
-					  {div_footer(),[]}]}),
+tc_pal(Category,Importance,Format,Args) ->
+    tc_print(Category,Importance,Format,Args),
+    cast({log,sync,self(),group_leader(),Category,Importance,
+	  [{div_header(Category),[]},
+	   {Format,Args},
+	   {div_footer(),[]}]}),
     ok.
 
 
 %%%-----------------------------------------------------------------
-%%% @spec tc_pal(Category,Format,Args) -> ok
+%%% @spec ct_pal(Category,Format,Args) -> ok
 %%%      Category = atom()
 %%%      Format = string()
 %%%      Args = list()
@@ -445,7 +488,7 @@ maybe_log_timestamp() ->
 	{MS,S,_} ->
 	    ok;
 	_ ->
-	    cast({log,sync,self(),group_leader(),
+	    cast({log,sync,self(),group_leader(),ct_internal,?MAX_IMPORTANCE,
 		  [{"<i>~s</i>",[log_timestamp({MS,S,US})]}]})
     end.
 
@@ -469,7 +512,7 @@ log_timestamp({MS,S,US}) ->
 		      stylesheet,
 		      async_print_jobs}).
 
-logger(Parent,Mode) ->
+logger(Parent, Mode, Verbosity) ->
     register(?MODULE,self()),
 
     %%! Below is a temporary workaround for the limitation of
@@ -502,26 +545,27 @@ logger(Parent,Mode) ->
 	    %% dir) so logs are independent of Common Test installation
 	    {ok,Cwd} = file:get_cwd(),
 	    CTPath = code:lib_dir(common_test),
-	    CSSFileSrc = filename:join(filename:join(CTPath, "priv"),
-				       ?css_default),
-	    CSSFileDestTop = filename:join(Cwd, ?css_default),
-	    CSSFileDestRun = filename:join(AbsDir, ?css_default),
-	    case file:copy(CSSFileSrc, CSSFileDestTop) of
-		{error,Reason0} ->
+	    PrivFiles = [?css_default,?jquery_script,?tablesorter_script],
+	    PrivFilesSrc = [filename:join(filename:join(CTPath, "priv"), F) ||
+			       F <- PrivFiles],
+	    PrivFilesDestTop = [filename:join(Cwd, F) || F <- PrivFiles],
+	    PrivFilesDestRun = [filename:join(AbsDir, F) || F <- PrivFiles],
+	    case copy_priv_files(PrivFilesSrc, PrivFilesDestTop) of
+		{error,Src1,Dest1,Reason1} ->
 		    io:format(user, "ERROR! "++
-			      "CSS file ~p could not be copied to ~p. "++
-			      "Reason: ~p~n",
-			      [CSSFileSrc,CSSFileDestTop,Reason0]),
-		    exit({css_file_error,CSSFileDestTop});
-		_ ->
-		    case file:copy(CSSFileSrc, CSSFileDestRun) of
-			{error,Reason1} ->
+				  "Priv file ~p could not be copied to ~p. "++
+				  "Reason: ~p~n",
+			      [Src1,Dest1,Reason1]),
+		    exit({priv_file_error,Dest1});
+		ok ->
+		    case copy_priv_files(PrivFilesSrc, PrivFilesDestRun) of
+			{error,Src2,Dest2,Reason2} ->
 			    io:format(user, "ERROR! "++
-				      "CSS file ~p could not be copied to ~p. "++
-				      "Reason: ~p~n",
-				      [CSSFileSrc,CSSFileDestRun,Reason1]),
-			    exit({css_file_error,CSSFileDestRun});
-			_ ->
+					  "Priv file ~p could not be copied to ~p. "++
+					  "Reason: ~p~n",
+				      [Src2,Dest2,Reason2]),
+			    exit({priv_file_error,Dest2});
+			ok ->
 			    ok
 		    end
 	    end
@@ -541,6 +585,23 @@ logger(Parent,Mode) ->
 	      [log_timestamp(now()),"Common Test Logger started"]),
     Parent ! {started,self(),{Time,filename:absname("")}},
     set_evmgr_gl(CtLogFd),
+
+    %% save verbosity levels in dictionary for fast lookups
+    io:format(CtLogFd, "\nVERBOSITY LEVELS:\n", []),
+    case proplists:get_value('$unspecified', Verbosity) of
+	undefined -> ok;
+	GenLvl    -> io:format(CtLogFd, "~-25s~3w~n",
+			       ["general level",GenLvl])
+    end,
+    [begin put({verbosity,Cat},VLvl),
+	   if Cat == '$unspecified' ->
+		   ok;
+	      true ->
+		   io:format(CtLogFd, "~-25w~3w~n", [Cat,VLvl])
+	   end
+     end || {Cat,VLvl} <- Verbosity],
+    io:nl(CtLogFd),
+
     logger_loop(#logger_state{parent=Parent,
 			      log_dir=AbsDir,
 			      start_time=Time,
@@ -549,31 +610,58 @@ logger(Parent,Mode) ->
 			      tc_groupleaders=[],
 			      async_print_jobs=[]}).
 
+copy_priv_files([SrcF | SrcFs], [DestF | DestFs]) ->
+    case file:copy(SrcF, DestF) of
+	{error,Reason} ->
+	    {error,SrcF,DestF,Reason};
+	_ ->
+	    copy_priv_files(SrcFs, DestFs)
+    end;
+copy_priv_files([], []) ->
+    ok.
+
 logger_loop(State) ->
     receive
-	{log,SyncOrAsync,Pid,GL,List} ->
-	    case get_groupleader(Pid, GL, State) of
-		{tc_log,TCGL,TCGLs} ->
-		    case erlang:is_process_alive(TCGL) of
-			true ->
-			    State1 = print_to_log(SyncOrAsync, Pid, TCGL,
-						  List, State),
-			    logger_loop(State1#logger_state{tc_groupleaders =
-							       TCGLs});
-			false ->
-			    %% Group leader is dead, so write to the
-			    %% CtLog instead
-			    Fd = State#logger_state.ct_log_fd,
-			    [begin io:format(Fd,Str,Args),io:nl(Fd) end || 
+	{log,SyncOrAsync,Pid,GL,Category,Importance,List} ->
+	    VLvl = case Category of
+		       ct_internal ->
+			   ?MAX_VERBOSITY;
+		       _ ->
+			   case get({verbosity,Category}) of
+			       undefined -> get({verbosity,'$unspecified'});
+			       Val       -> Val
+			end
+		end,
+	    if Importance >= (100-VLvl) ->
+		    case get_groupleader(Pid, GL, State) of
+			{tc_log,TCGL,TCGLs} ->
+			    case erlang:is_process_alive(TCGL) of
+				true ->
+				    State1 = print_to_log(SyncOrAsync, Pid,
+							  TCGL, List, State),
+				    logger_loop(State1#logger_state{
+						  tc_groupleaders = TCGLs});
+				false ->
+				    %% Group leader is dead, so write to the
+				    %% CtLog instead
+				    Fd = State#logger_state.ct_log_fd,
+				    [begin io:format(Fd,Str,Args),
+					   io:nl(Fd) end || {Str,Args} <- List],
+				    logger_loop(State)			    
+			    end;
+			{ct_log,Fd,TCGLs} ->
+			    [begin io:format(Fd,Str,Args),io:nl(Fd) end ||
 				{Str,Args} <- List],
-			    logger_loop(State)			    
+			    logger_loop(State#logger_state{
+					  tc_groupleaders = TCGLs})
 		    end;
-		{ct_log,Fd,TCGLs} ->
-		    [begin io:format(Fd,Str,Args),io:nl(Fd) end ||
-			{Str,Args} <- List],
-		    logger_loop(State#logger_state{tc_groupleaders = TCGLs})
-	    end;
+	       true ->
+		    logger_loop(State)
+	    end;			
 	{{init_tc,TCPid,GL,RefreshLog},From} ->
+	    %% make sure no IO for this test case from the
+	    %% CT logger gets rejected
+	    test_server:permit_io(GL, self()),
 	    print_style(GL, State#logger_state.stylesheet),
 	    set_evmgr_gl(GL),
 	    TCGLs = add_tc_gl(TCPid,GL,State),
@@ -659,13 +747,24 @@ create_io_fun(FromPid, State) ->
 
 print_to_log(sync, FromPid, TCGL, List, State) ->
     IoFun = create_io_fun(FromPid, State),
-    io:format(TCGL, "~s", [lists:foldl(IoFun, [], List)]),
+    %% in some situations (exceptions), the printout is made from the
+    %% test server IO process and there's no valid group leader to send to
+    IoProc = if FromPid /= TCGL -> TCGL;
+		true -> State#logger_state.ct_log_fd
+	     end,
+    io:format(IoProc, "~s", [lists:foldl(IoFun, [], List)]),
     State;
 
 print_to_log(async, FromPid, TCGL, List, State) ->
     IoFun = create_io_fun(FromPid, State),
+    %% in some situations (exceptions), the printout is made from the
+    %% test server IO process and there's no valid group leader to send to
+    IoProc = if FromPid /= TCGL -> TCGL;
+		true -> State#logger_state.ct_log_fd
+	     end,
     Printer = fun() ->
-		      io:format(TCGL, "~s", [lists:foldl(IoFun, [], List)])
+		      test_server:permit_io(IoProc, self()),
+		      io:format(IoProc, "~s", [lists:foldl(IoFun, [], List)])
 	      end,
     case State#logger_state.async_print_jobs of
 	[] ->
@@ -770,7 +869,7 @@ set_evmgr_gl(GL) ->
 
 open_ctlog() ->
     {ok,Fd} = file:open(?ct_log_name,[write]),
-    io:format(Fd, header("Common Test Framework Log"), []),
+    io:format(Fd, header("Common Test Framework Log", {[],[1,2],[]}), []),
     case file:consult(ct_run:variables_file_name("../")) of
 	{ok,Vars} ->
 	    io:format(Fd, config_table(Vars), []);
@@ -1080,14 +1179,14 @@ total_row(Success, Fail, UserSkip, AutoSkip, NotBuilt, All) ->
 		    integer_to_list(UserSkip),integer_to_list(AutoSkip)}
 	end,
     [xhtml("<tr valign=top>\n", 
-	   ["<tr class=\"",odd_or_even(),"\">\n"]),
+	   ["</tbody>\n<tfoot>\n<tr class=\"",odd_or_even(),"\">\n"]),
      "<td><b>Total</b></td>\n", Label, TimestampCell,
      "<td align=right><b>",integer_to_list(Success),"<b></td>\n",
      "<td align=right><b>",integer_to_list(Fail),"<b></td>\n",
      "<td align=right>",integer_to_list(AllSkip),
      " (",UserSkipStr,"/",AutoSkipStr,")</td>\n",  
      "<td align=right><b>",integer_to_list(NotBuilt),"<b></td>\n",
-     AllInfo, "</tr>\n"].
+     AllInfo, "</tr>\n</tfoot>\n"].
 
 not_built(_BaseName,_LogDir,_All,[]) ->
     0;
@@ -1144,10 +1243,12 @@ index_header(Label, StartTime) ->
     Head =
 	case Label of
 	    undefined ->
-		header("Test Results", format_time(StartTime));
+		header("Test Results", format_time(StartTime),
+		       {[],[1],[2,3,4,5]});
 	    _ ->
 		header("Test Results for '" ++ Label ++ "'",
-		       format_time(StartTime))
+		       format_time(StartTime),
+		       {[],[1],[2,3,4,5]})
 	end,
     [Head |
      ["<center>\n",
@@ -1159,15 +1260,17 @@ index_header(Label, StartTime) ->
 	     "\">COMMON TEST FRAMEWORK LOG</a>\n</div>"]),
       xhtml("<br>\n", "<br /><br /><br />\n"),
       xhtml(["<table border=\"3\" cellpadding=\"5\" "
-	     "bgcolor=\"",?table_color3,"\">\n"], "<table>\n"),
+	     "bgcolor=\"",?table_color3,"\">\n"],
+	    ["<table id=\"",?sortable_table_name,"\">\n",
+	     "<thead>\n<tr>\n"]),
       "<th><b>Test Name</b></th>\n",
       xhtml(["<th><font color=\"",?table_color3,"\">_</font>Ok"
 	     "<font color=\"",?table_color3,"\">_</font></th>\n"],
 	    "<th>Ok</th>\n"),
       "<th>Failed</th>\n",
       "<th>Skipped", xhtml("<br>", "<br />"), "(User/Auto)</th>\n"
-      "<th>Missing", xhtml("<br>", "<br />"), "Suites</th>\n"
-      "\n"]].
+      "<th>Missing", xhtml("<br>", "<br />"), "Suites</th>\n",
+      xhtml("", "</tr>\n</thead>\n<tbody>\n")]].
 
 all_suites_index_header() ->
     {ok,Cwd} = file:get_cwd(),
@@ -1180,12 +1283,14 @@ all_suites_index_header(IndexDir) ->
     AllRunsLink = xhtml(["<a href=\"",?all_runs_name,"\">",AllRuns,"</a>\n"],
 			["<div id=\"button_holder\" class=\"btn\">\n"
 			 "<a href=\"",?all_runs_name,"\">",AllRuns,"</a>\n</div>"]),
-    [header("Test Results") | 
+    [header("Test Results", {[3],[1,2,8,9,10],[4,5,6,7]}) | 
      ["<center>\n",
       AllRunsLink,
       xhtml("<br><br>\n", "<br /><br />\n"),
       xhtml(["<table border=\"3\" cellpadding=\"5\" "
-	     "bgcolor=\"",?table_color2,"\">\n"], "<table>\n"),
+	     "bgcolor=\"",?table_color2,"\">\n"],
+	    ["<table id=\"",?sortable_table_name,"\">\n",
+	     "<thead>\n<tr>\n"]),
       "<th>Test Name</th>\n",
       "<th>Label</th>\n",
       "<th>Test Run Started</th>\n",
@@ -1198,7 +1303,7 @@ all_suites_index_header(IndexDir) ->
       "<th>Node</th>\n",
       "<th>CT Log</th>\n",
       "<th>Old Runs</th>\n",
-      "\n"]].
+      xhtml("", "</tr>\n</thead>\n<tbody>\n")]].
 
 all_runs_header() ->
     {ok,Cwd} = file:get_cwd(),
@@ -1210,10 +1315,12 @@ all_runs_header() ->
 		     "<a href=\"",?index_name,
 		     "\">TEST INDEX PAGE</a>\n</div>"]),
 	      xhtml("<br>\n", "<br /><br />\n")],
-    [header(Title) |
+    [header(Title, {[1],[2,3,5],[4,6,7,8,9,10]}) |
      ["<center>\n", IxLink,
       xhtml(["<table border=\"3\" cellpadding=\"5\" "
-	     "bgcolor=\"",?table_color1,"\">\n"], "<table>\n"),
+	     "bgcolor=\"",?table_color1,"\">\n"],
+	    ["<table id=\"",?sortable_table_name,"\">\n",
+	     "<thead>\n<tr>\n"]),
       "<th><b>History</b></th>\n"
       "<th><b>Node</b></th>\n"
       "<th><b>Label</b></th>\n"
@@ -1225,23 +1332,29 @@ all_runs_header() ->
 	    "<th>Ok</th>\n"),
       "<th>Failed</th>\n"
       "<th>Skipped<br>(User/Auto)</th>\n"
-      "<th>Missing<br>Suites</th>\n"
-      "\n"]].
+      "<th>Missing<br>Suites</th>\n",
+      xhtml("", "</tr>\n</thead>\n<tbody>\n")]].
 
-header(Title) ->
-    header1(Title, "").
-header(Title, SubTitle) ->
-    header1(Title, SubTitle).
+header(Title, TableCols) ->
+    header1(Title, "", TableCols).
+header(Title, SubTitle, TableCols) ->
+    header1(Title, SubTitle, TableCols).
 
-header1(Title, SubTitle) ->
+header1(Title, SubTitle, TableCols) ->
     SubTitleHTML = if SubTitle =/= "" ->
 			   ["<center>\n",
 			    "<h3>" ++ SubTitle ++ "</h3>\n",
 			    xhtml("</center>\n<br>\n", "</center>\n<br />\n")];
-		      true -> xhtml("<br>\n", "<br />\n")
+		      true -> xhtml("<br>", "<br />")
 		   end,
     CSSFile = xhtml(fun() -> "" end, 
-		    fun() -> make_relative(locate_default_css_file()) end),
+		    fun() -> make_relative(locate_priv_file(?css_default)) end),
+    JQueryFile =
+	xhtml(fun() -> "" end, 
+	      fun() -> make_relative(locate_priv_file(?jquery_script)) end),
+    TableSorterFile =
+	xhtml(fun() -> "" end, 
+	      fun() -> make_relative(locate_priv_file(?tablesorter_script)) end),
     [xhtml(["<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n",
 	    "<html>\n"],
 	   ["<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n",
@@ -1252,7 +1365,17 @@ header1(Title, SubTitle) ->
      "<title>" ++ Title ++ " " ++ SubTitle ++ "</title>\n",
      "<meta http-equiv=\"cache-control\" content=\"no-cache\">\n",
      xhtml("",
-	   ["<link rel=\"stylesheet\" href=\"",CSSFile,"\" type=\"text/css\">"]),
+	   ["<link rel=\"stylesheet\" href=\"",CSSFile,"\" type=\"text/css\">\n"]),
+     xhtml("",
+	   ["<script type=\"text/javascript\" src=\"",JQueryFile,
+	    "\"></script>\n"]),
+     xhtml("",
+	   ["<script type=\"text/javascript\" src=\"",TableSorterFile,
+	    "\"></script>\n"]),
+     xhtml(fun() -> "" end,
+	   fun() -> insert_javascript({tablesorter,?sortable_table_name,
+				       TableCols})
+	   end),
      "</head>\n",
      body_tag(),
      "<center>\n",
@@ -1262,6 +1385,10 @@ header1(Title, SubTitle) ->
 
 index_footer() ->
     ["</table>\n"
+     "</center>\n" | footer()].
+
+all_runs_index_footer() ->
+    ["</tbody>\n</table>\n"
      "</center>\n" | footer()].
 
 footer() ->
@@ -1275,7 +1402,8 @@ footer() ->
       xhtml("<br>\n", "<br />\n"),
       xhtml("</font></p>\n", "</div>\n"),
       "</center>\n"
-      "</body>\n"].
+      "</body>\n"
+      "</html>\n"].
 
 
 body_tag() ->
@@ -1291,7 +1419,7 @@ current_time() ->
 
 format_time({{Y, Mon, D}, {H, Min, S}}) ->
     Weekday = weekday(calendar:day_of_the_week(Y, Mon, D)),
-    lists:flatten(io_lib:format("~s ~s ~p ~w ~2.2.0w:~2.2.0w:~2.2.0w",
+    lists:flatten(io_lib:format("~s ~s ~2.2.0w ~w ~2.2.0w:~2.2.0w:~2.2.0w",
 				[Weekday, month(Mon), D, Y, H, Min, S])).
 
 weekday(1) -> "Mon";
@@ -1417,8 +1545,12 @@ config_table_header() ->
     [
      xhtml(["<h2>Configuration</h2>\n"
 	    "<table border=\"3\" cellpadding=\"5\" bgcolor=\"",?table_color1,"\"\n"],
-	   "<h4>CONFIGURATION</h4>\n<table>\n"),
-     "<tr><th>Key</th><th>Value</th></tr>\n"].
+	   ["<h4>CONFIGURATION</h4>\n",
+	    "<table id=\"",?sortable_table_name,"\">\n",
+	    "<thead>\n"]),
+     "<tr><th>Key</th><th>Value</th></tr>\n",
+     xhtml("", "</thead>\n<tbody>\n")
+    ].
 
 config_table1([{Key,Value}|Vars]) ->
     [xhtml(["<tr><td>", atom_to_list(Key), "</td>\n",
@@ -1428,7 +1560,7 @@ config_table1([{Key,Value}|Vars]) ->
 	    "<td>", io_lib:format("~p",[Value]), "</td>\n</tr>\n"]) | 
      config_table1(Vars)];
 config_table1([]) ->
-    ["</table>\n"].
+    ["</tbody>\n</table>\n"].
 
 
 make_all_runs_index(When) ->
@@ -1442,7 +1574,8 @@ make_all_runs_index(When) ->
     DirsSorted = (catch sort_all_runs(Dirs)),
     Header = all_runs_header(),
     Index = [runentry(Dir) || Dir <- DirsSorted],
-    Result = file:write_file(AbsName,Header++Index++index_footer()),
+    Result = file:write_file(AbsName,Header++Index++
+				 all_runs_index_footer()),
     if When == start -> ok;
        true -> io:put_chars("done\n")
     end,
@@ -1981,7 +2114,7 @@ simulate() ->
 
 simulate_logger_loop() ->
     receive 
-    	{log,_,_,_,List} ->
+    	{log,_,_,_,_,_,List} ->
 	    S = [[io_lib:format(Str,Args),io_lib:nl()] || {Str,Args} <- List],
 	    io:format("~s",[S]),
 	    simulate_logger_loop();
@@ -2078,34 +2211,34 @@ basic_html() ->
     end.
 
 %%%-----------------------------------------------------------------
-%%% @spec locate_default_css_file() -> CSSFile
+%%% @spec locate_priv_file(FileName) -> PrivFile
 %%%
 %%% @doc
 %%%
-locate_default_css_file() ->
+locate_priv_file(FileName) ->
     {ok,CWD} = file:get_cwd(),
-    CSSFileInCwd = filename:join(CWD, ?css_default),
-    case filelib:is_file(CSSFileInCwd) of
+    PrivFileInCwd = filename:join(CWD, FileName),
+    case filelib:is_file(PrivFileInCwd) of
 	true ->
-	    CSSFileInCwd;
+	    PrivFileInCwd;
 	false ->
-	    CSSResultFile =
+	    PrivResultFile =
 		case {whereis(?MODULE),self()} of
 		    {Self,Self} ->
 			%% executed on the ct_logs process
-			filename:join(get(ct_run_dir), ?css_default);
+			filename:join(get(ct_run_dir), FileName);
 		    _ ->			
 			%% executed on other process than ct_logs
 			{ok,RunDir} = get_log_dir(true),
-			filename:join(RunDir, ?css_default)
+			filename:join(RunDir, FileName)
 		end,
-	    case filelib:is_file(CSSResultFile) of
+	    case filelib:is_file(PrivResultFile) of
 		true ->
-		    CSSResultFile;
+		    PrivResultFile;
 		false ->
 		    %% last resort, try use css file in CT installation
 		    CTPath = code:lib_dir(common_test),		
-		    filename:join(filename:join(CTPath, "priv"), ?css_default)
+		    filename:join(filename:join(CTPath, "priv"), FileName)
 	    end
     end.
 
@@ -2144,7 +2277,7 @@ make_relative1(DirTs, CwdTs) ->
 %%%
 %%% @doc
 %%%
-get_ts_html_wrapper(TestName, PrintLabel, Cwd) ->
+get_ts_html_wrapper(TestName, PrintLabel, Cwd, TableCols) ->
     TestName1 = if is_list(TestName) ->
 			lists:flatten(TestName);
 		   true ->
@@ -2204,17 +2337,36 @@ get_ts_html_wrapper(TestName, PrintLabel, Cwd) ->
 		 "Open Telecom Platform</a><br />\n",
 		 "Updated: <!date>", current_time(), "<!/date>",
 		 "<br />\n</div>\n"],
-	    CSSFile = xhtml(fun() -> "" end, 
-			    fun() -> make_relative(locate_default_css_file(), Cwd) end),
+	    CSSFile =
+		xhtml(fun() -> "" end, 
+		      fun() -> make_relative(locate_priv_file(?css_default),
+					     Cwd)
+		      end),
+	    JQueryFile =
+		xhtml(fun() -> "" end, 
+		      fun() -> make_relative(locate_priv_file(?jquery_script),
+					     Cwd)
+		      end),
+	    TableSorterFile =
+		xhtml(fun() -> "" end, 
+		      fun() -> make_relative(locate_priv_file(?tablesorter_script),
+					    Cwd)
+		      end),
+	    TableSorterScript =
+		xhtml(fun() -> "" end, 
+		      fun() -> insert_javascript({tablesorter,
+						  ?sortable_table_name,
+						  TableCols}) end),
 	    {xhtml,
 	     ["<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n",
 	      "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n",
 	      "<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n",
 	      "<head>\n<title>", TestName1, "</title>\n",
 	      "<meta http-equiv=\"cache-control\" content=\"no-cache\">\n",
-	      "<link rel=\"stylesheet\" href=\"", CSSFile, "\" type=\"text/css\">",
-	      "</head>\n","<body>\n", 
-	      LabelStr, "\n"],
+	      "<link rel=\"stylesheet\" href=\"", CSSFile, "\" type=\"text/css\">\n",
+	      "<script type=\"text/javascript\" src=\"", JQueryFile, "\"></script>\n",
+	      "<script type=\"text/javascript\" src=\"", TableSorterFile, "\"></script>\n"] ++
+	      TableSorterScript ++ ["</head>\n","<body>\n", LabelStr, "\n"],
 	     ["<center>\n<br /><hr /><p>\n",
 	      "<a href=\"", AllRuns,
 	      "\">Test run history\n</a>  |  ",
@@ -2222,3 +2374,89 @@ get_ts_html_wrapper(TestName, PrintLabel, Cwd) ->
 	      "\">Top level test index\n</a>\n</p>\n",
 	      Copyright,"</center>\n</body>\n</html>\n"]}
     end.
+
+insert_javascript({tablesorter,_TableName,undefined}) ->
+    [];
+
+insert_javascript({tablesorter,TableName,
+		   {DateCols,TextCols,ValCols}}) ->
+    Headers =
+	lists:flatten(
+	  lists:sort(
+	    lists:flatmap(fun({Sorter,Cols}) ->
+				  [lists:flatten(
+				     io_lib:format("      ~w: "
+						   "{ sorter: '~s' },\n",
+						   [Col-1,Sorter])) || Col<-Cols]
+			  end, [{"CTDateSorter",DateCols},
+				{"CTTextSorter",TextCols},
+				{"CTValSorter",ValCols}]))),
+    Headers1 = string:substr(Headers, 1, length(Headers)-2),
+
+    ["<script type=\"text/javascript\">\n",
+     "// Parser for date format, e.g: Wed Jul 4 2012 11:24:15\n",
+     "var monthNames = {};\n",
+     "monthNames[\"Jan\"] = \"01\"; monthNames[\"Feb\"] = \"02\";\n",
+     "monthNames[\"Mar\"] = \"03\"; monthNames[\"Apr\"] = \"04\";\n",
+     "monthNames[\"May\"] = \"05\"; monthNames[\"Jun\"] = \"06\";\n",
+     "monthNames[\"Jul\"] = \"07\"; monthNames[\"Aug\"] = \"08\";\n",
+     "monthNames[\"Sep\"] = \"09\"; monthNames[\"Oct\"] = \"10\";\n",
+     "monthNames[\"Nov\"] = \"11\"; monthNames[\"Dec\"] = \"12\";\n",
+     "$.tablesorter.addParser({\n",
+     "  id: 'CTDateSorter',\n",
+     "  is: function(s) {\n",
+     "      return false; },\n",
+     "  format: function(s) {\n",
+     %% place empty cells, "-" and "?" at the bottom
+     "      if (s.length < 2) return 999999999;\n",
+     "      else {\n",
+     %% match out each date element
+     "          var date = s.match(/(\\w{3})\\s(\\w{3})\\s(\\d{2})\\s(\\d{4})\\s(\\d{2}):(\\d{2}):(\\d{2})/);\n",
+     "          var y = date[4]; var mo = monthNames[date[2]]; var d = String(date[3]);\n",
+     "          var h = String(date[5]); var mi = String(date[6]); var sec = String(date[7]);\n",
+     "          return (parseInt('' + y + mo + d + h + mi + sec)); }},\n",
+     "  type: 'numeric' });\n",
+
+     "// Parser for general text format\n",
+     "$.tablesorter.addParser({\n",
+     "  id: 'CTTextSorter',\n",
+     "  is: function(s) {\n",
+     "    return false; },\n",
+     "  format: function(s) {\n",
+     %% place empty cells, "?" and "-" at the bottom
+     "    if (s.length < 1) return 'zzzzzzzz';\n",
+     "    else if (s == \"?\") return 'zzzzzzz';\n",
+     "    else if (s == \"-\") return 'zzzzzz';\n",
+     "    else if (s == \"FAILED\") return 'A';\n",
+     "    else if (s == \"SKIPPED\") return 'B';\n",
+     "    else if (s == \"OK\") return 'C';\n",
+     "    else return '' + s; },\n",
+     "  type: 'text' });\n",
+
+     "// Parser for numerical values\n",
+     "$.tablesorter.addParser({\n",
+     "  id: 'CTValSorter',\n",
+     "  is: function(s) {\n",
+     "    return false; },\n",
+     "  format: function(s) {\n"
+     %% place empty cells and "?" at the bottom
+     "    if (s.length < 1) return '-2';\n",
+     "    else if (s == \"?\") return '-1';\n",
+     %% look for skip value, eg "3 (2/1)"
+     "    else if ((s.search(/(\\d{1,})\\s/)) >= 0) {\n",
+     "      var num = s.match(/(\\d{1,})\\s/);\n",
+     %% return only the total skip value for sorting
+     "      return (parseInt('' + num[1])); }\n",
+     "    else if ((s.search(/(\\d{1,})\\.(\\d{3})s/)) >= 0) {\n",
+     "      var num = s.match(/(\\d{1,})\\.(\\d{3})/);\n",
+     "      if (num[1] == \"0\") return (parseInt('' + num[2]));\n",
+     "      else return (parseInt('' + num[1] + num[2])); }\n",
+     "    else return '' + s; },\n",
+     "  type: 'numeric' });\n",
+
+     "$(document).ready(function() {\n",
+     "  $(\"#",TableName,"\").tablesorter({\n",
+     "    headers: { \n", Headers1, "\n    }\n  });\n",
+     "  $(\"#",TableName,"\").trigger(\"update\");\n",
+     "  $(\"#",TableName,"\").trigger(\"appendCache\");\n",
+     "});\n</script>\n"].

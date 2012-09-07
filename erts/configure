@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS ERL_TOP CC CFLAGS STATIC_CFLAGS CFLAG_RUNTIME_LIBRARY_PATH CPP CPPFLAGS CXX CXXFLAGS LD LDFLAGS DED_LD DED_LDFLAGS DED_LD_FLAG_RUNTIME_LIBRARY_PATH LFS_CFLAGS LFS_LDFLAGS LFS_LIBS RANLIB AR GETCONF erl_xcomp_sysroot erl_xcomp_isysroot erl_xcomp_bigendian erl_xcomp_linux_clock_gettime_correction erl_xcomp_linux_nptl erl_xcomp_linux_usable_sigusrx erl_xcomp_linux_usable_sigaltstack erl_xcomp_poll erl_xcomp_kqueue erl_xcomp_putenv_copy erl_xcomp_reliable_fpe erl_xcomp_getaddrinfo erl_xcomp_gethrvtime_procfs_ioctl erl_xcomp_clock_gettime_cpu_time erl_xcomp_after_morecore_hook erl_xcomp_dlsym_brk_wrappers build build_cpu build_vendor build_os host host_cpu host_vendor host_os CROSS_COMPILING ac_ct_CC EXEEXT OBJEXT ENABLE_ALLOC_TYPE_VARS PERFCTR_PATH USE_VM_PROBES OTP_RELEASE GCC MIXED_CYGWIN_VC MIXED_MSYS_VC MIXED_VC MIXED_CYGWIN_MINGW MIXED_CYGWIN MIXED_MSYS ac_pt_GETCONF DEBUG_FLAGS DEBUG_CFLAGS WFLAGS EGREP EXTERNAL_WORD_SIZE OPSYS ARCH LIBCARBON ac_ct_RANLIB YACC PERL LN_S ac_ct_AR RM MKDIR XSLTPROC FOP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL_DIR HCC HCFLAGS vxworks_reclaim LDFLAG_RUNTIME_LIBRARY_PATH ERLANG_OSTYPE DEXPORT ERTS_INTERNAL_X_LIBS ETHR_X_LIBS ETHR_LIBS ETHR_LIB_NAME ETHR_DEFS ETHR_THR_LIB_BASE ETHR_THR_LIB_BASE_DIR ETHR_X86_SSE2_ASM ERTS_BUILD_SMP_EMU EMU_THR_LIB_NAME EMU_THR_X_LIBS EMU_THR_LIBS EMU_THR_DEFS EMU_LOCK_CHECKING THR_LIBS THR_DEFS TERMCAP_LIB Z_LIB LIBSCTP HAVE_VALGRIND BITS64 LIBRT M4 TSP_APP ERTS_BUILD_HYBRID_EMU HIPE_HELPERS HIPE_ENABLED NATIVE_LIBS_ENABLED USE_PERFCTR ERTS_ENABLE_KERNEL_POLL ac_ct_DED_LD DED_EXT DED_SYS_INCLUDE DED_CFLAGS DED_THR_DEFS DED_EMU_THR_DEFS EMU_CC DTRACE ac_ct_DTRACE DTRACE_CPP DTRACE_ENABLED DTRACE_ENABLED_2STEP SSL_INCLUDE SSL_ROOT SSL_LIBDIR SSL_CRYPTO_LIBNAME SSL_SSL_LIBNAME SSL_CC_RUNTIME_LIBRARY_PATH SSL_LD_RUNTIME_LIBRARY_PATH SSL_DED_LD_RUNTIME_LIBRARY_PATH SSL_DYNAMIC_ONLY SSL_LINK_WITH_KERBEROS STATIC_KERBEROS_LIBS SSL_LINK_WITH_ZLIB STATIC_ZLIB_LIBS REGTOOL os_mon_programs CPU_SUP_LIBS JAVAC ac_ct_CXX CC32 CFLAGS32 LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS ERL_TOP CC CFLAGS STATIC_CFLAGS CFLAG_RUNTIME_LIBRARY_PATH CPP CPPFLAGS CXX CXXFLAGS LD LDFLAGS DED_LD DED_LDFLAGS DED_LD_FLAG_RUNTIME_LIBRARY_PATH LFS_CFLAGS LFS_LDFLAGS LFS_LIBS RANLIB AR GETCONF erl_xcomp_sysroot erl_xcomp_isysroot erl_xcomp_bigendian erl_xcomp_double_middle_endian erl_xcomp_linux_clock_gettime_correction erl_xcomp_linux_nptl erl_xcomp_linux_usable_sigusrx erl_xcomp_linux_usable_sigaltstack erl_xcomp_poll erl_xcomp_kqueue erl_xcomp_putenv_copy erl_xcomp_reliable_fpe erl_xcomp_getaddrinfo erl_xcomp_gethrvtime_procfs_ioctl erl_xcomp_clock_gettime_cpu_time erl_xcomp_after_morecore_hook erl_xcomp_dlsym_brk_wrappers build build_cpu build_vendor build_os host host_cpu host_vendor host_os CROSS_COMPILING ac_ct_CC EXEEXT OBJEXT ENABLE_ALLOC_TYPE_VARS PERFCTR_PATH USE_VM_PROBES OTP_RELEASE GCC MIXED_CYGWIN_VC MIXED_MSYS_VC MIXED_VC MIXED_CYGWIN_MINGW MIXED_CYGWIN MIXED_MSYS ac_pt_GETCONF DEBUG_FLAGS DEBUG_CFLAGS WFLAGS EGREP EXTERNAL_WORD_SIZE OPSYS ARCH LIBCARBON ac_ct_RANLIB YACC PERL LN_S ac_ct_AR RM MKDIR XSLTPROC FOP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA INSTALL_DIR HCC HCFLAGS vxworks_reclaim LDFLAG_RUNTIME_LIBRARY_PATH ERLANG_OSTYPE DEXPORT ERTS_INTERNAL_X_LIBS ETHR_X_LIBS ETHR_LIBS ETHR_LIB_NAME ETHR_DEFS ETHR_THR_LIB_BASE ETHR_THR_LIB_BASE_DIR ETHR_X86_SSE2_ASM ERTS_BUILD_SMP_EMU EMU_THR_LIB_NAME EMU_THR_X_LIBS EMU_THR_LIBS EMU_THR_DEFS EMU_LOCK_CHECKING THR_LIBS THR_DEFS TERMCAP_LIB Z_LIB LIBSCTP HAVE_VALGRIND BITS64 LIBRT M4 TSP_APP HIPE_HELPERS HIPE_ENABLED NATIVE_LIBS_ENABLED USE_PERFCTR ERTS_ENABLE_KERNEL_POLL ac_ct_DED_LD DED_EXT DED_SYS_INCLUDE DED_CFLAGS DED_THR_DEFS DED_EMU_THR_DEFS EMU_CC DTRACE ac_ct_DTRACE DTRACE_CPP DTRACE_ENABLED DTRACE_ENABLED_2STEP SSL_INCLUDE SSL_ROOT SSL_LIBDIR SSL_CRYPTO_LIBNAME SSL_SSL_LIBNAME SSL_CC_RUNTIME_LIBRARY_PATH SSL_LD_RUNTIME_LIBRARY_PATH SSL_DED_LD_RUNTIME_LIBRARY_PATH SSL_DYNAMIC_ONLY SSL_LINK_WITH_KERBEROS STATIC_KERBEROS_LIBS SSL_LINK_WITH_ZLIB STATIC_ZLIB_LIBS REGTOOL os_mon_programs CPU_SUP_LIBS JAVAC ac_ct_CXX CC32 CFLAGS32 LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -846,6 +846,10 @@ ac_env_erl_xcomp_bigendian_set=${erl_xcomp_bigendian+set}
 ac_env_erl_xcomp_bigendian_value=$erl_xcomp_bigendian
 ac_cv_env_erl_xcomp_bigendian_set=${erl_xcomp_bigendian+set}
 ac_cv_env_erl_xcomp_bigendian_value=$erl_xcomp_bigendian
+ac_env_erl_xcomp_double_middle_endian_set=${erl_xcomp_double_middle_endian+set}
+ac_env_erl_xcomp_double_middle_endian_value=$erl_xcomp_double_middle_endian
+ac_cv_env_erl_xcomp_double_middle_endian_set=${erl_xcomp_double_middle_endian+set}
+ac_cv_env_erl_xcomp_double_middle_endian_value=$erl_xcomp_double_middle_endian
 ac_env_erl_xcomp_linux_clock_gettime_correction_set=${erl_xcomp_linux_clock_gettime_correction+set}
 ac_env_erl_xcomp_linux_clock_gettime_correction_value=$erl_xcomp_linux_clock_gettime_correction
 ac_cv_env_erl_xcomp_linux_clock_gettime_correction_set=${erl_xcomp_linux_clock_gettime_correction+set}
@@ -979,7 +983,6 @@ Optional Features:
                           enable halfword emulator (only for 64bit builds)
   --enable-smp-support    enable smp support
   --disable-smp-support   disable smp support
-  --enable-hybrid-heap    enable hybrid heap
   --enable-lock-checking  enable lock checking
   --enable-lock-counter   enable lock counters
   --enable-kernel-poll    enable kernel poll support
@@ -1077,6 +1080,9 @@ Some influential environment variables:
               compiling)
   erl_xcomp_bigendian
               big endian system: yes|no (only used when cross compiling)
+  erl_xcomp_double_middle_endian
+              double-middle-endian system: yes|no (only used when cross
+              compiling)
   erl_xcomp_linux_clock_gettime_correction
               clock_gettime() can be used for time correction: yes|no (only
               used when cross compiling)
@@ -1534,6 +1540,7 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
 
 
 
@@ -2878,18 +2885,6 @@ if test "${with_termcap+set}" = set; then
 
 else
   with_termcap=yes
-fi;
-
-
-# Check whether --enable-hybrid-heap or --disable-hybrid-heap was given.
-if test "${enable_hybrid_heap+set}" = set; then
-  enableval="$enable_hybrid_heap"
-   case "$enableval" in
-    no) enable_hybrid_heap=no ;;
-    *)  enable_hybrid_heap=yes ;;
-  esac
-else
-  enable_hybrid_heap=unknown
 fi;
 
 # Check whether --enable-lock-checking or --disable-lock-checking was given.
@@ -5351,6 +5346,8 @@ case $chk_arch_ in
     armv5b)	ARCH=arm;;
     armv5teb)	ARCH=arm;;
     armv5tel)	ARCH=arm;;
+    armv5tejl)	ARCH=arm;;
+    armv7l)	ARCH=arm;;
     tile)	ARCH=tile;;
     *)	 	ARCH=noarch;;
 esac
@@ -17250,6 +17247,137 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
+
+case X$erl_xcomp_double_middle_endian in
+    X) ;;
+    Xyes|Xno|Xunknown) ac_cv_c_double_middle_endian=$erl_xcomp_double_middle_endian;;
+    *) { { echo "$as_me:$LINENO: error: Bad erl_xcomp_double_middle_endian value: $erl_xcomp_double_middle_endian" >&5
+echo "$as_me: error: Bad erl_xcomp_double_middle_endian value: $erl_xcomp_double_middle_endian" >&2;}
+   { (exit 1); exit 1; }; };;
+esac
+
+echo "$as_me:$LINENO: checking whether double word ordering is middle-endian" >&5
+echo $ECHO_N "checking whether double word ordering is middle-endian... $ECHO_C" >&6
+if test "${ac_cv_c_double_middle_endian+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  # It does not; compile a test program.
+if test "$cross_compiling" = yes; then
+  ac_cv_c_double_middle=unknown
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <stdlib.h>
+
+int
+main(void)
+{
+  int i = 0;
+  int zero = 0;
+  int bigendian;
+  int zero_index = 0;
+
+  union
+  {
+    long int l;
+    char c[sizeof (long int)];
+  } u;
+
+  /* we'll use the one with 32-bit words */
+  union
+  {
+    double d;
+    unsigned int c[2];
+  } vint;
+
+  union
+  {
+    double d;
+    unsigned long c[2];
+  } vlong;
+
+  union
+  {
+    double d;
+    unsigned short c[2];
+  } vshort;
+
+
+  /* Are we little or big endian?  From Harbison&Steele.  */
+  u.l = 1;
+  bigendian = (u.c[sizeof (long int) - 1] == 1);
+
+  zero_index = bigendian ? 1 : 0;
+
+  vint.d = 1.0;
+  vlong.d = 1.0;
+  vshort.d = 1.0;
+
+  if (sizeof(unsigned int) == 4)
+    {
+      if (vint.c[zero_index] != 0)
+	zero = 1;
+    }
+  else if (sizeof(unsigned long) == 4)
+    {
+      if (vlong.c[zero_index] != 0)
+	zero = 1;
+    }
+  else if (sizeof(unsigned short) == 4)
+    {
+      if (vshort.c[zero_index] != 0)
+	zero = 1;
+    }
+
+  exit (zero);
+}
+
+_ACEOF
+rm -f conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_c_double_middle_endian=no
+else
+  echo "$as_me: program exited with status $ac_status" >&5
+echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+( exit $ac_status )
+ac_cv_c_double_middle_endian=yes
+fi
+rm -f core *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+fi
+fi
+echo "$as_me:$LINENO: result: $ac_cv_c_double_middle_endian" >&5
+echo "${ECHO_T}$ac_cv_c_double_middle_endian" >&6
+case $ac_cv_c_double_middle_endian in
+  yes)
+
+cat >>confdefs.h <<\_ACEOF
+#define DOUBLE_MIDDLE_ENDIAN 1
+_ACEOF
+ ;;
+  no)
+     ;;
+  *)
+    { echo "$as_me:$LINENO: WARNING: unknown double endianness
+presetting ac_cv_c_double_middle_endian=no (or yes) will help" >&5
+echo "$as_me: WARNING: unknown double endianness
+presetting ac_cv_c_double_middle_endian=no (or yes) will help" >&2;} ;;
+esac
+
 
 # Check whether --enable-native-ethr-impls or --disable-native-ethr-impls was given.
 if test "${enable_native_ethr_impls+set}" = set; then
@@ -29339,6 +29467,128 @@ presetting ac_cv_c_bigendian=no (or yes) will help" >&2;}
    { (exit 1); exit 1; }; } ;;
 esac
 
+echo "$as_me:$LINENO: checking whether double word ordering is middle-endian" >&5
+echo $ECHO_N "checking whether double word ordering is middle-endian... $ECHO_C" >&6
+if test "${ac_cv_c_double_middle_endian+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  # It does not; compile a test program.
+if test "$cross_compiling" = yes; then
+  ac_cv_c_double_middle=unknown
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <stdlib.h>
+
+int
+main(void)
+{
+  int i = 0;
+  int zero = 0;
+  int bigendian;
+  int zero_index = 0;
+
+  union
+  {
+    long int l;
+    char c[sizeof (long int)];
+  } u;
+
+  /* we'll use the one with 32-bit words */
+  union
+  {
+    double d;
+    unsigned int c[2];
+  } vint;
+
+  union
+  {
+    double d;
+    unsigned long c[2];
+  } vlong;
+
+  union
+  {
+    double d;
+    unsigned short c[2];
+  } vshort;
+
+
+  /* Are we little or big endian?  From Harbison&Steele.  */
+  u.l = 1;
+  bigendian = (u.c[sizeof (long int) - 1] == 1);
+
+  zero_index = bigendian ? 1 : 0;
+
+  vint.d = 1.0;
+  vlong.d = 1.0;
+  vshort.d = 1.0;
+
+  if (sizeof(unsigned int) == 4)
+    {
+      if (vint.c[zero_index] != 0)
+	zero = 1;
+    }
+  else if (sizeof(unsigned long) == 4)
+    {
+      if (vlong.c[zero_index] != 0)
+	zero = 1;
+    }
+  else if (sizeof(unsigned short) == 4)
+    {
+      if (vshort.c[zero_index] != 0)
+	zero = 1;
+    }
+
+  exit (zero);
+}
+
+_ACEOF
+rm -f conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_c_double_middle_endian=no
+else
+  echo "$as_me: program exited with status $ac_status" >&5
+echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+( exit $ac_status )
+ac_cv_c_double_middle_endian=yes
+fi
+rm -f core *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+fi
+fi
+echo "$as_me:$LINENO: result: $ac_cv_c_double_middle_endian" >&5
+echo "${ECHO_T}$ac_cv_c_double_middle_endian" >&6
+case $ac_cv_c_double_middle_endian in
+  yes)
+
+cat >>confdefs.h <<\_ACEOF
+#define DOUBLE_MIDDLE_ENDIAN 1
+_ACEOF
+ ;;
+  no)
+     ;;
+  *)
+    { echo "$as_me:$LINENO: WARNING: unknown double endianness
+presetting ac_cv_c_double_middle_endian=no (or yes) will help" >&5
+echo "$as_me: WARNING: unknown double endianness
+presetting ac_cv_c_double_middle_endian=no (or yes) will help" >&2;} ;;
+esac
+
 
 
 for ac_func in fdatasync
@@ -30570,11 +30820,13 @@ done
 
 
 
+
 for ac_func in ieee_handler fpsetmask finite isnan isinf res_gethostbyname dlopen \
 		pread pwrite writev memmove strerror strerror_r strncasecmp \
 		gethrtime localtime_r gmtime_r inet_pton mmap mremap memcpy mallopt \
 		sbrk _sbrk __sbrk brk _brk __brk \
-		flockfile fstat strlcpy strlcat setsid posix2time setlocale nl_langinfo poll
+		flockfile fstat strlcpy strlcat setsid posix2time time2posix \
+		setlocale nl_langinfo poll
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 echo "$as_me:$LINENO: checking for $ac_func" >&5
@@ -30743,6 +30995,77 @@ _ACEOF
 else
   cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_POSIX2TIME 0
+_ACEOF
+
+
+fi
+echo "$as_me:$LINENO: checking whether time2posix is declared" >&5
+echo $ECHO_N "checking whether time2posix is declared... $ECHO_C" >&6
+if test "${ac_cv_have_decl_time2posix+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <time.h>
+
+int
+main ()
+{
+#ifndef time2posix
+  char *p = (char *) time2posix;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_have_decl_time2posix=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_have_decl_time2posix=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_have_decl_time2posix" >&5
+echo "${ECHO_T}$ac_cv_have_decl_time2posix" >&6
+if test $ac_cv_have_decl_time2posix = yes; then
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_TIME2POSIX 1
+_ACEOF
+
+
+else
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_TIME2POSIX 0
 _ACEOF
 
 
@@ -32015,6 +32338,293 @@ _ACEOF
 
 fi
 done
+
+
+echo "$as_me:$LINENO: checking whether in6addr_any is declared" >&5
+echo $ECHO_N "checking whether in6addr_any is declared... $ECHO_C" >&6
+if test "${erts_cv_have_in6addr_any+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+		#include <sys/types.h>
+		#include <sys/socket.h>
+		#include <netinet/in.h>
+
+int
+main ()
+{
+printf("%d", in6addr_any.s6_addr[16]);
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  erts_cv_have_in6addr_any=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+erts_cv_have_in6addr_any=no
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+
+fi
+echo "$as_me:$LINENO: result: $erts_cv_have_in6addr_any" >&5
+echo "${ECHO_T}$erts_cv_have_in6addr_any" >&6
+
+case "$erts_cv_have_in6addr_any" in
+ yes)
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_IN6ADDR_ANY 1
+_ACEOF
+
+esac
+
+echo "$as_me:$LINENO: checking whether in6addr_loopback is declared" >&5
+echo $ECHO_N "checking whether in6addr_loopback is declared... $ECHO_C" >&6
+if test "${erts_cv_have_in6addr_loopback+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+		#include <sys/types.h>
+		#include <sys/socket.h>
+		#include <netinet/in.h>
+
+int
+main ()
+{
+printf("%d", in6addr_loopback.s6_addr[16]);
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  erts_cv_have_in6addr_loopback=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+erts_cv_have_in6addr_loopback=no
+
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+
+fi
+echo "$as_me:$LINENO: result: $erts_cv_have_in6addr_loopback" >&5
+echo "${ECHO_T}$erts_cv_have_in6addr_loopback" >&6
+
+case "$erts_cv_have_in6addr_loopback" in
+ yes)
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_IN6ADDR_LOOPBACK 1
+_ACEOF
+
+esac
+
+echo "$as_me:$LINENO: checking whether IN6ADDR_ANY_INIT is declared" >&5
+echo $ECHO_N "checking whether IN6ADDR_ANY_INIT is declared... $ECHO_C" >&6
+if test "${ac_cv_have_decl_IN6ADDR_ANY_INIT+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <netinet/in.h>
+
+int
+main ()
+{
+#ifndef IN6ADDR_ANY_INIT
+  char *p = (char *) IN6ADDR_ANY_INIT;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_have_decl_IN6ADDR_ANY_INIT=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_have_decl_IN6ADDR_ANY_INIT=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_have_decl_IN6ADDR_ANY_INIT" >&5
+echo "${ECHO_T}$ac_cv_have_decl_IN6ADDR_ANY_INIT" >&6
+if test $ac_cv_have_decl_IN6ADDR_ANY_INIT = yes; then
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_IN6ADDR_ANY_INIT 1
+_ACEOF
+
+
+else
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_IN6ADDR_ANY_INIT 0
+_ACEOF
+
+
+fi
+echo "$as_me:$LINENO: checking whether IN6ADDR_LOOPBACK_INIT is declared" >&5
+echo $ECHO_N "checking whether IN6ADDR_LOOPBACK_INIT is declared... $ECHO_C" >&6
+if test "${ac_cv_have_decl_IN6ADDR_LOOPBACK_INIT+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <netinet/in.h>
+
+int
+main ()
+{
+#ifndef IN6ADDR_LOOPBACK_INIT
+  char *p = (char *) IN6ADDR_LOOPBACK_INIT;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_have_decl_IN6ADDR_LOOPBACK_INIT=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_have_decl_IN6ADDR_LOOPBACK_INIT=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_have_decl_IN6ADDR_LOOPBACK_INIT" >&5
+echo "${ECHO_T}$ac_cv_have_decl_IN6ADDR_LOOPBACK_INIT" >&6
+if test $ac_cv_have_decl_IN6ADDR_LOOPBACK_INIT = yes; then
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_IN6ADDR_LOOPBACK_INIT 1
+_ACEOF
+
+
+else
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_IN6ADDR_LOOPBACK_INIT 0
+_ACEOF
+
+
+fi
+
 
 
 
@@ -34441,42 +35051,6 @@ TSP_APP=
 if test X${enable_tsp} = Xyes; then
   TSP_APP=tsp
 fi
-
-
-#
-# Check if we should build hybrid emulator
-#
-
-echo "$as_me:$LINENO: checking whether a hybrid heap emulator should be built" >&5
-echo $ECHO_N "checking whether a hybrid heap emulator should be built... $ECHO_C" >&6
-case $enable_hybrid_heap-$host_os in
-    yes-*)
-	echo "$as_me:$LINENO: result: yes; enabled by user" >&5
-echo "${ECHO_T}yes; enabled by user" >&6
-	ERTS_BUILD_HYBRID_EMU=yes;;
-    no-*)
-	echo "$as_me:$LINENO: result: no; disabled by user" >&5
-echo "${ECHO_T}no; disabled by user" >&6
-	ERTS_BUILD_HYBRID_EMU=no;;
-    *-win32|*-vxworks) # vxworks have their own "configure scripts"...
-	echo "$as_me:$LINENO: result: no; default on this platform" >&5
-echo "${ECHO_T}no; default on this platform" >&6
-	ERTS_BUILD_HYBRID_EMU=no;;
-    *)
-	echo "$as_me:$LINENO: result: yes; default on this platform" >&5
-echo "${ECHO_T}yes; default on this platform" >&6
-	ERTS_BUILD_HYBRID_EMU=yes;;
-esac
-
-
-if test $ERTS_BUILD_HYBRID_EMU = yes; then
-
-cat >>confdefs.h <<\_ACEOF
-#define ERTS_HAVE_HYBRID_EMU 1
-_ACEOF
-
-fi
-
 
 
 #
@@ -37620,6 +38194,7 @@ s,@GETCONF@,$GETCONF,;t t
 s,@erl_xcomp_sysroot@,$erl_xcomp_sysroot,;t t
 s,@erl_xcomp_isysroot@,$erl_xcomp_isysroot,;t t
 s,@erl_xcomp_bigendian@,$erl_xcomp_bigendian,;t t
+s,@erl_xcomp_double_middle_endian@,$erl_xcomp_double_middle_endian,;t t
 s,@erl_xcomp_linux_clock_gettime_correction@,$erl_xcomp_linux_clock_gettime_correction,;t t
 s,@erl_xcomp_linux_nptl@,$erl_xcomp_linux_nptl,;t t
 s,@erl_xcomp_linux_usable_sigusrx@,$erl_xcomp_linux_usable_sigusrx,;t t
@@ -37708,7 +38283,6 @@ s,@BITS64@,$BITS64,;t t
 s,@LIBRT@,$LIBRT,;t t
 s,@M4@,$M4,;t t
 s,@TSP_APP@,$TSP_APP,;t t
-s,@ERTS_BUILD_HYBRID_EMU@,$ERTS_BUILD_HYBRID_EMU,;t t
 s,@HIPE_HELPERS@,$HIPE_HELPERS,;t t
 s,@HIPE_ENABLED@,$HIPE_ENABLED,;t t
 s,@NATIVE_LIBS_ENABLED@,$NATIVE_LIBS_ENABLED,;t t

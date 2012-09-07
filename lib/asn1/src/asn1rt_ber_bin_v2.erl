@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 2002-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2002-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -610,8 +610,8 @@ match_tags(Vlist = [{T,_V}|_], [T]) ->
     Vlist;
 match_tags(Tlv, []) ->
     Tlv;
-match_tags({Tag,_V},[T|_Tt]) ->
-    {error,{asn1,{wrong_tag,{Tag,T}}}}.
+match_tags(Tlv = {Tag,_V},[T|_Tt]) ->
+    exit({error,{asn1,{wrong_tag,{{expected,T},{got,Tag,Tlv}}}}}).
 
  
 cindex(Ix,Val,Cname) -> 

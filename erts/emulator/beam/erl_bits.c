@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 1999-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1999-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -1005,8 +1005,13 @@ erts_new_bs_put_float(Process *c_p, Eterm arg, Uint num_bits, int flags)
 
 	    if (is_float(arg)) {
 		FloatDef *fdp = (FloatDef*)(float_val(arg) + 1);
+#ifdef DOUBLE_MIDDLE_ENDIAN
+		a = fdp->fw[1];
+		b = fdp->fw[0];
+#else
 		a = fdp->fw[0];
 		b = fdp->fw[1];
+#endif
 	    } else if (is_small(arg)) {
 		u.f64 = (double) signed_val(arg);
 		a = u.i32[0];
@@ -1015,8 +1020,13 @@ erts_new_bs_put_float(Process *c_p, Eterm arg, Uint num_bits, int flags)
 		if (big_to_double(arg, &u.f64) < 0) {
 		    return 0;
 		}
+#ifdef DOUBLE_MIDDLE_ENDIAN
+		a = u.i32[1];
+		b = u.i32[0];
+#else
 		a = u.i32[0];
 		b = u.i32[1];
+#endif
 	    } else {
 		return 0;
 	    }

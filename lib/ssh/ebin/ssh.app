@@ -2,7 +2,7 @@
 
 {application, ssh,
  [{description, "SSH-2 for Erlang/OTP"},
-  {vsn, "2.1"},
+  {vsn, "2.1.1"},
   {modules, [ssh,
 	     ssh_app,
 	     ssh_acceptor,

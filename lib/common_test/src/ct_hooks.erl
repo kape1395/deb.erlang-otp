@@ -48,7 +48,7 @@
 
 %% @doc Called before any suites are started
 -spec init(State :: term()) -> ok |
-			       {error, Reason :: term()}.
+			       {fail, Reason :: term()}.
 init(Opts) ->
     call(get_new_hooks(Opts, undefined) ++ get_builtin_hooks(Opts),
 	 ok, init, []).
@@ -192,12 +192,12 @@ call([{Hook, call_id, NextFun} | Rest], Config, Meta, Hooks) ->
 	    case lists:keyfind(NewId, #ct_hook_config.id, Hooks) of
 		false when NextFun =:= undefined ->
 		    {Hooks ++ [NewHook],
-		     [{NewId, call_init} | Rest]};
+		     Rest ++ [{NewId, call_init}]};
 		ExistingHook when is_tuple(ExistingHook) ->
 		    {Hooks, Rest};
 		_ ->
 		    {Hooks ++ [NewHook],
-		     [{NewId, call_init}, {NewId,NextFun} | Rest]}
+		     Rest ++ [{NewId, call_init}, {NewId,NextFun}]}
 	    end,
 	call(resort(NewRest,NewHooks,Meta), Config, Meta, NewHooks)
     catch Error:Reason ->
@@ -353,11 +353,10 @@ pos(Id,[_|Rest],Num) ->
     pos(Id,Rest,Num+1).
 
 
-
 catch_apply(M,F,A, Default) ->
     try
 	apply(M,F,A)
-    catch error:Reason ->
+    catch _:Reason ->
 	    case erlang:get_stacktrace() of
             %% Return the default if it was the CTH module which did not have the function.
 		[{M,F,A,_}|_] when Reason == undef ->

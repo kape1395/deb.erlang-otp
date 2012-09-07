@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1999-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1999-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -282,6 +282,7 @@ starter(Host, Name, Args) ->
         vxworks ->
             test_server:start_node(Name, slave, [{args,Args}]);
         _ ->
+	    io:format("slave:start_link(~p,~p,~p).~n",[Host,Name,Args]),
             slave:start_link(Host, Name, Args)
     end.
 
@@ -403,8 +404,8 @@ create_paths() ->
         filename:join(Path, "idl_output") ++
 	" -pa " ++
         filename:join(Path, "all_SUITE_data") ++
-        " -pa " ++
-        filename:dirname(code:which(orber)).
+        " -pa \"" ++
+        filename:dirname(code:which(orber))++"\"".
 
 %%------------------------------------------------------------
 %% function : destroy_node

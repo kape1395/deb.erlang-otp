@@ -42,6 +42,7 @@
 ./lib/common_test/ebin/ct_config.beam
 ./lib/common_test/ebin/ct_config_plain.beam
 ./lib/common_test/ebin/ct_config_xml.beam
+./lib/common_test/ebin/ct_conn_log_h.beam
 ./lib/common_test/ebin/ct_cover.beam
 ./lib/common_test/ebin/ct_event.beam
 ./lib/common_test/ebin/ct_framework.beam
@@ -55,6 +56,7 @@
 ./lib/common_test/ebin/ct_master_event.beam
 ./lib/common_test/ebin/ct_master_logs.beam
 ./lib/common_test/ebin/ct_master_status.beam
+./lib/common_test/ebin/ct_netconfc.beam
 ./lib/common_test/ebin/ct_repeat.beam
 ./lib/common_test/ebin/ct_rpc.beam
 ./lib/common_test/ebin/ct_run.beam
@@ -65,6 +67,7 @@
 ./lib/common_test/ebin/ct_telnet_client.beam
 ./lib/common_test/ebin/ct_testspec.beam
 ./lib/common_test/ebin/ct_util.beam
+./lib/common_test/ebin/cth_conn_log.beam
 ./lib/common_test/ebin/cth_log_redirect.beam
 ./lib/common_test/ebin/cth_surefire.beam
 ./lib/common_test/ebin/unix_telnet.beam
@@ -788,6 +791,7 @@
 ./lib/dialyzer/ebin/dialyzer_cl_parse.beam
 ./lib/dialyzer/ebin/dialyzer_codeserver.beam
 ./lib/dialyzer/ebin/dialyzer_contracts.beam
+./lib/dialyzer/ebin/dialyzer_coordinator.beam
 ./lib/dialyzer/ebin/dialyzer_dataflow.beam
 ./lib/dialyzer/ebin/dialyzer_dep.beam
 ./lib/dialyzer/ebin/dialyzer_explanation.beam
@@ -797,8 +801,10 @@
 ./lib/dialyzer/ebin/dialyzer_plt.beam
 ./lib/dialyzer/ebin/dialyzer_races.beam
 ./lib/dialyzer/ebin/dialyzer_succ_typings.beam
+./lib/dialyzer/ebin/dialyzer_timing.beam
 ./lib/dialyzer/ebin/dialyzer_typesig.beam
 ./lib/dialyzer/ebin/dialyzer_utils.beam
+./lib/dialyzer/ebin/dialyzer_worker.beam
 ./lib/diameter/Makefile
 ./lib/diameter/doc/src/depend.mk
 ./lib/diameter/ebin/diameter.app
@@ -840,6 +846,7 @@
 ./lib/diameter/ebin/diameter_sync.beam
 ./lib/diameter/ebin/diameter_tcp.beam
 ./lib/diameter/ebin/diameter_tcp_sup.beam
+./lib/diameter/ebin/diameter_transport.beam
 ./lib/diameter/ebin/diameter_transport_sup.beam
 ./lib/diameter/ebin/diameter_types.beam
 ./lib/diameter/ebin/diameter_watchdog.beam
@@ -2412,4 +2419,5 @@
 ./lib/xmerl/src/xmerl_sax_parser_utf8.erl
 ./lib/xmerl/src/xmerl_xpath_parse.erl
 ./make/emd2exml
+./otp_client_build.temp_stderr.1741
 ./prebuilt.files

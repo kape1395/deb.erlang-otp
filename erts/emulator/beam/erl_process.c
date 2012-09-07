@@ -28,7 +28,6 @@
 #include "erl_vm.h"
 #include "global.h"
 #include "erl_process.h"
-#include "erl_nmgc.h"
 #include "error.h"
 #include "bif.h"
 #include "erl_db.h"
@@ -52,20 +51,21 @@
 
 #define ERTS_SCHED_SPIN_UNTIL_YIELD 100
 
-#define ERTS_SCHED_SYS_SLEEP_SPINCOUNT 10
+#define ERTS_SCHED_SYS_SLEEP_SPINCOUNT_VERY_LONG 40
+#define ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_VERY_LONG 1000
+#define ERTS_SCHED_SYS_SLEEP_SPINCOUNT_LONG 20
+#define ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_LONG 1000
+#define ERTS_SCHED_SYS_SLEEP_SPINCOUNT_MEDIUM 10
+#define ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_MEDIUM 1000
+#define ERTS_SCHED_SYS_SLEEP_SPINCOUNT_SHORT 10
+#define ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_SHORT 0
+#define ERTS_SCHED_SYS_SLEEP_SPINCOUNT_VERY_SHORT 5
+#define ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_VERY_SHORT 0
+#define ERTS_SCHED_SYS_SLEEP_SPINCOUNT_NONE 0
+#define ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_NONE 0
+
 #define ERTS_SCHED_TSE_SLEEP_SPINCOUNT_FACT 1000
-#define ERTS_SCHED_TSE_SLEEP_SPINCOUNT \
-  (ERTS_SCHED_SYS_SLEEP_SPINCOUNT*ERTS_SCHED_TSE_SLEEP_SPINCOUNT_FACT)
 #define ERTS_SCHED_SUSPEND_SLEEP_SPINCOUNT 0
-
-#define ERTS_WAKEUP_OTHER_LIMIT_VERY_HIGH (200*CONTEXT_REDS)
-#define ERTS_WAKEUP_OTHER_LIMIT_HIGH (50*CONTEXT_REDS)
-#define ERTS_WAKEUP_OTHER_LIMIT_MEDIUM (10*CONTEXT_REDS)
-#define ERTS_WAKEUP_OTHER_LIMIT_LOW (CONTEXT_REDS)
-#define ERTS_WAKEUP_OTHER_LIMIT_VERY_LOW (CONTEXT_REDS/10)
-
-#define ERTS_WAKEUP_OTHER_DEC 10
-#define ERTS_WAKEUP_OTHER_FIXED_INC (CONTEXT_REDS/10)
 
 #if 0 || defined(DEBUG)
 #define ERTS_FAKE_SCHED_BIND_PRINT_SORTED_CPU_DATA
@@ -123,13 +123,17 @@ Uint erts_no_schedulers;
 Uint erts_max_processes = ERTS_DEFAULT_MAX_PROCESSES;
 Uint erts_process_tab_index_mask;
 
-static int wakeup_other_limit;
-
 int erts_sched_thread_suggested_stack_size = -1;
 
 #ifdef ERTS_ENABLE_LOCK_CHECK
 ErtsLcPSDLocks erts_psd_required_locks[ERTS_PSD_SIZE];
 #endif
+
+static struct {
+    int aux_work;
+    int tse;
+    int sys_schedule;
+} sched_busy_wait;
 
 #ifdef ERTS_SMP
 int erts_disable_proc_not_running_opt;
@@ -239,11 +243,6 @@ struct erts_system_monitor_flags_t erts_system_monitor_flags;
 /* system performance monitor */
 Eterm erts_system_profile;
 struct erts_system_profile_flags_t erts_system_profile_flags;
-
-#ifdef HYBRID
-Uint erts_num_active_procs;
-Process** erts_active_procs;
-#endif
 
 #if ERTS_MAX_PROCESSES > 0x7fffffff
 #error "Need to store process_count in another type"
@@ -360,6 +359,7 @@ dbg_chk_aux_work_val(erts_aint32_t value)
     valid |= ERTS_SSI_AUX_WORK_ASYNC_READY_CLEAN;
 #endif
 #ifdef ERTS_SMP
+    valid |= ERTS_SSI_AUX_WORK_DELAYED_AW_WAKEUP;
     valid |= ERTS_SSI_AUX_WORK_MISC_THR_PRGR;
     valid |= ERTS_SSI_AUX_WORK_DD;
     valid |= ERTS_SSI_AUX_WORK_DD_THR_PRGR;
@@ -467,12 +467,6 @@ erts_init_process(int ncpu)
     process_tab = (Process**) erts_alloc(ERTS_ALC_T_PROC_TABLE,
 					 erts_max_processes*sizeof(Process*));
     sys_memzero(process_tab, erts_max_processes * sizeof(Process*));
-#ifdef HYBRID
-    erts_active_procs = (Process**)
-        erts_alloc(ERTS_ALC_T_ACTIVE_PROCS,
-                   erts_max_processes * sizeof(Process*));
-    erts_num_active_procs = 0;
-#endif
 
     erts_smp_mtx_init(&proc_tab_mtx, "proc_tab");
     p_last = -1;
@@ -906,13 +900,13 @@ unset_aux_work_flags(ErtsSchedulerSleepInfo *ssi, erts_aint32_t flgs)
 #ifdef ERTS_SMP
 
 static ERTS_INLINE void
-thr_prgr_current_reset(ErtsAuxWorkData *awdp)
+haw_thr_prgr_current_reset(ErtsAuxWorkData *awdp)
 {
     awdp->current_thr_prgr = ERTS_THR_PRGR_INVALID;
 }
 
 static ERTS_INLINE ErtsThrPrgrVal
-thr_prgr_current(ErtsAuxWorkData *awdp)
+haw_thr_prgr_current(ErtsAuxWorkData *awdp)
 {
     ErtsThrPrgrVal current = awdp->current_thr_prgr;
     if (current == ERTS_THR_PRGR_INVALID) {
@@ -920,6 +914,60 @@ thr_prgr_current(ErtsAuxWorkData *awdp)
 	awdp->current_thr_prgr = current;
     }
     return current;
+}
+
+static ERTS_INLINE void
+haw_thr_prgr_current_check_progress(ErtsAuxWorkData *awdp)
+{
+    ErtsThrPrgrVal current = awdp->current_thr_prgr;
+    if (current != ERTS_THR_PRGR_INVALID
+	&& !erts_thr_progress_equal(current, erts_thr_progress_current())) {
+	/*
+	 * We have used a previouly read current value that isn't the
+	 * latest; need to poke ourselfs in order to guarantee no loss
+	 * of wakeups.
+	 */
+	erts_sched_poke(awdp->ssi);
+    }
+}
+
+static ERTS_INLINE erts_aint32_t
+handle_delayed_aux_work_wakeup(ErtsAuxWorkData *awdp, erts_aint32_t aux_work)
+{
+    int jix, max_jix;
+    unset_aux_work_flags(awdp->ssi, ERTS_SSI_AUX_WORK_DELAYED_AW_WAKEUP);
+
+    ERTS_THR_MEMORY_BARRIER;
+
+    max_jix = awdp->delayed_wakeup.jix;
+    awdp->delayed_wakeup.jix = -1;
+    for (jix = 0; jix <= max_jix; jix++) {
+	int sched = awdp->delayed_wakeup.job[jix].sched;
+	erts_aint32_t aux_work = awdp->delayed_wakeup.job[jix].aux_work;
+
+	ASSERT(awdp->delayed_wakeup.sched2jix[sched] == jix);
+	awdp->delayed_wakeup.sched2jix[sched] = -1;
+	set_aux_work_flags_wakeup_nob(ERTS_SCHED_SLEEP_INFO_IX(sched-1),
+				      aux_work);
+    }
+    return aux_work & ~ERTS_SSI_AUX_WORK_DELAYED_AW_WAKEUP;
+}
+
+static ERTS_INLINE void
+schedule_aux_work_wakeup(ErtsAuxWorkData *awdp, int sched, erts_aint32_t aux_work)
+{
+    int jix = awdp->delayed_wakeup.sched2jix[sched];
+    if (jix >= 0) {
+	ASSERT(awdp->delayed_wakeup.job[jix].sched == sched);
+	awdp->delayed_wakeup.job[jix].aux_work |= aux_work;
+    }
+    else {
+	jix = ++awdp->delayed_wakeup.jix;
+	awdp->delayed_wakeup.sched2jix[sched] = jix;
+	awdp->delayed_wakeup.job[jix].sched = sched;
+	awdp->delayed_wakeup.job[jix].aux_work = aux_work;
+    }
+    set_aux_work_flags_wakeup_nob(awdp->ssi, ERTS_SSI_AUX_WORK_DELAYED_AW_WAKEUP);
 }
 
 #endif
@@ -1020,7 +1068,7 @@ static ERTS_INLINE erts_aint32_t
 handle_misc_aux_work_thr_prgr(ErtsAuxWorkData *awdp,
 			      erts_aint32_t aux_work)
 {
-    if (!erts_thr_progress_has_reached_this(thr_prgr_current(awdp),
+    if (!erts_thr_progress_has_reached_this(haw_thr_prgr_current(awdp),
 					    awdp->misc.thr_prgr))
 	return aux_work & ~ERTS_SSI_AUX_WORK_MISC_THR_PRGR;
 
@@ -1125,7 +1173,7 @@ handle_async_ready_clean(ErtsAuxWorkData *awdp,
 
 #ifdef ERTS_SMP
     if (awdp->async_ready.need_thr_prgr
-	&& !erts_thr_progress_has_reached_this(thr_prgr_current(awdp),
+	&& !erts_thr_progress_has_reached_this(haw_thr_prgr_current(awdp),
 					       awdp->async_ready.thr_prgr)) {
 	return aux_work & ~ERTS_SSI_AUX_WORK_ASYNC_READY_CLEAN;
     }
@@ -1178,8 +1226,14 @@ handle_fix_alloc(ErtsAuxWorkData *awdp, erts_aint32_t aux_work)
 void
 erts_alloc_notify_delayed_dealloc(int ix)
 {
-    set_aux_work_flags_wakeup_nob(ERTS_SCHED_SLEEP_INFO_IX(ix-1),
-				  ERTS_SSI_AUX_WORK_DD);
+    ErtsSchedulerData *esdp = erts_get_scheduler_data();
+    if (esdp)
+	schedule_aux_work_wakeup(&esdp->aux_work_data,
+				 ix,
+				 ERTS_SSI_AUX_WORK_DD);
+    else
+	set_aux_work_flags_wakeup_relb(ERTS_SCHED_SLEEP_INFO_IX(ix-1),
+				       ERTS_SSI_AUX_WORK_DD);
 }
 
 static ERTS_INLINE erts_aint32_t
@@ -1206,7 +1260,7 @@ handle_delayed_dealloc(ErtsAuxWorkData *awdp, erts_aint32_t aux_work)
 
     if (need_thr_progress) {
 	if (wakeup == ERTS_THR_PRGR_INVALID)
-	    wakeup = erts_thr_progress_later_than(thr_prgr_current(awdp));
+	    wakeup = erts_thr_progress_later(awdp->esdp);
 	awdp->dd.thr_prgr = wakeup;
 	set_aux_work_flags(ssi, ERTS_SSI_AUX_WORK_DD_THR_PRGR);
 	awdp->dd.thr_prgr = wakeup;
@@ -1227,7 +1281,7 @@ handle_delayed_dealloc_thr_prgr(ErtsAuxWorkData *awdp, erts_aint32_t aux_work)
     int need_thr_progress;
     int more_work;
     ErtsThrPrgrVal wakeup = ERTS_THR_PRGR_INVALID;
-    ErtsThrPrgrVal current = thr_prgr_current(awdp);
+    ErtsThrPrgrVal current = haw_thr_prgr_current(awdp);
 
     if (!erts_thr_progress_has_reached_this(current, awdp->dd.thr_prgr))
 	return aux_work & ~ERTS_SSI_AUX_WORK_DD_THR_PRGR;
@@ -1249,7 +1303,7 @@ handle_delayed_dealloc_thr_prgr(ErtsAuxWorkData *awdp, erts_aint32_t aux_work)
 
     if (need_thr_progress) {
 	if (wakeup == ERTS_THR_PRGR_INVALID)
-	    wakeup = erts_thr_progress_later_than(current);
+	    wakeup = erts_thr_progress_later(awdp->esdp);
 	awdp->dd.thr_prgr = wakeup;
 	erts_thr_progress_wakeup(awdp->esdp, wakeup);
     }
@@ -1438,7 +1492,7 @@ handle_setup_aux_work_timer(ErtsAuxWorkData *awdp, erts_aint32_t aux_work)
 }
 
 static erts_aint32_t
-handle_aux_work(ErtsAuxWorkData *awdp, erts_aint32_t orig_aux_work)
+handle_aux_work(ErtsAuxWorkData *awdp, erts_aint32_t orig_aux_work, int waiting)
 {
 #undef HANDLE_AUX_WORK
 #define HANDLE_AUX_WORK(FLG, HNDLR) \
@@ -1456,7 +1510,7 @@ handle_aux_work(ErtsAuxWorkData *awdp, erts_aint32_t orig_aux_work)
     erts_aint32_t ignore = 0;
 
 #ifdef ERTS_SMP
-    thr_prgr_current_reset(awdp);
+    haw_thr_prgr_current_reset(awdp);
 #endif
 
     ERTS_DBG_CHK_AUX_WORK_VAL(aux_work);
@@ -1477,6 +1531,8 @@ handle_aux_work(ErtsAuxWorkData *awdp, erts_aint32_t orig_aux_work)
      * eachother. Most frequent first.
      */
 #ifdef ERTS_SMP
+    HANDLE_AUX_WORK(ERTS_SSI_AUX_WORK_DELAYED_AW_WAKEUP,
+		    handle_delayed_aux_work_wakeup);
     HANDLE_AUX_WORK(ERTS_SSI_AUX_WORK_DD,
 		    handle_delayed_dealloc);
     /* DD must be before DD_THR_PRGR */
@@ -1521,6 +1577,11 @@ handle_aux_work(ErtsAuxWorkData *awdp, erts_aint32_t orig_aux_work)
 		    handle_reap_ports);
 
     ERTS_DBG_CHK_AUX_WORK_VAL(aux_work);
+
+#ifdef ERTS_SMP
+    if (waiting && !aux_work)
+	haw_thr_prgr_current_check_progress(awdp);
+#endif
 
     return aux_work;
 
@@ -1950,7 +2011,7 @@ thr_prgr_fin_wait(void *vssi)
 				      | ERTS_SSI_FLG_TSE_SLEEPING));
 }
 
-static void init_aux_work_data(ErtsAuxWorkData *awdp, ErtsSchedulerData *esdp);
+static void init_aux_work_data(ErtsAuxWorkData *awdp, ErtsSchedulerData *esdp, char *dawwp);
 
 static void *
 aux_thread(void *unused)
@@ -1970,7 +2031,7 @@ aux_thread(void *unused)
     callbacks.finalize_wait = thr_prgr_fin_wait;
 
     erts_thr_progress_register_managed_thread(NULL, &callbacks, 1);
-    init_aux_work_data(awdp, NULL);
+    init_aux_work_data(awdp, NULL, NULL);
     awdp->ssi = ssi;
 
     sched_prep_spin_wait(ssi);
@@ -1982,7 +2043,7 @@ aux_thread(void *unused)
 	if (aux_work) {
 	    if (!thr_prgr_active)
 		erts_thr_progress_active(NULL, thr_prgr_active = 1);
-	    aux_work = handle_aux_work(awdp, aux_work);
+	    aux_work = handle_aux_work(awdp, aux_work, 1);
 	    if (aux_work && erts_thr_progress_update(NULL))
 		erts_thr_progress_leader_update(NULL);
 	}
@@ -2046,7 +2107,7 @@ scheduler_wait(int *fcalls, ErtsSchedulerData *esdp, ErtsRunQueue *rq)
 
 	erts_smp_runq_unlock(rq);
 
-	spincount = ERTS_SCHED_TSE_SLEEP_SPINCOUNT;
+	spincount = sched_busy_wait.tse;
 
     tse_wait:
 
@@ -2061,7 +2122,7 @@ scheduler_wait(int *fcalls, ErtsSchedulerData *esdp, ErtsRunQueue *rq)
 		    erts_thr_progress_active(esdp, thr_prgr_active = 1);
 		    sched_wall_time_change(esdp, 1);
 		}
-		aux_work = handle_aux_work(&esdp->aux_work_data, aux_work);
+		aux_work = handle_aux_work(&esdp->aux_work_data, aux_work, 1);
 		if (aux_work && erts_thr_progress_update(esdp))
 		    erts_thr_progress_leader_update(esdp);
 	    }
@@ -2097,7 +2158,7 @@ scheduler_wait(int *fcalls, ErtsSchedulerData *esdp, ErtsRunQueue *rq)
 	    }
 
 	    flgs = sched_prep_cont_spin_wait(ssi);
-	    spincount = ERTS_SCHED_TSE_SLEEP_SPINCOUNT;
+	    spincount = sched_busy_wait.aux_work;
 
 	    if (!(flgs & ERTS_SSI_FLG_WAITING)) {
 		ASSERT(!(flgs & ERTS_SSI_FLG_SLEEPING));
@@ -2134,7 +2195,9 @@ scheduler_wait(int *fcalls, ErtsSchedulerData *esdp, ErtsRunQueue *rq)
 	ASSERT(working);
 	sched_wall_time_change(esdp, working = 0);
 
-	spincount = ERTS_SCHED_SYS_SLEEP_SPINCOUNT;
+	spincount = sched_busy_wait.sys_schedule;
+	if (spincount == 0)
+	    goto sys_aux_work;
 
 	while (spincount-- > 0) {
 
@@ -2163,7 +2226,7 @@ scheduler_wait(int *fcalls, ErtsSchedulerData *esdp, ErtsRunQueue *rq)
 		if (!thr_prgr_active)
 		    erts_thr_progress_active(esdp, thr_prgr_active = 1);
 #endif
-		aux_work = handle_aux_work(&esdp->aux_work_data, aux_work);
+		aux_work = handle_aux_work(&esdp->aux_work_data, aux_work, 1);
 #ifdef ERTS_SMP
 		if (aux_work && erts_thr_progress_update(esdp))
 		    erts_thr_progress_leader_update(esdp);
@@ -3560,33 +3623,282 @@ erts_debug_nbalance(void)
 #endif
 }
 
+/* Wakeup other schedulers */
+
+typedef enum {
+    ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_HIGH,
+    ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_HIGH,
+    ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_MEDIUM,
+    ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_LOW,
+    ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_LOW
+} ErtsSchedWakeupOtherThreshold;
+
+typedef enum {
+    ERTS_SCHED_WAKEUP_OTHER_TYPE_PROPOSAL,
+    ERTS_SCHED_WAKEUP_OTHER_TYPE_LEGACY
+} ErtsSchedWakeupOtherType;
+
+/* First proposal */
+
+#define ERTS_WAKEUP_OTHER_LIMIT_VERY_HIGH (200*CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_HIGH (50*CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_MEDIUM (10*CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_LOW (CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_VERY_LOW (CONTEXT_REDS/10)
+
+#define ERTS_WAKEUP_OTHER_DEC_SHIFT_VERY_HIGH 3
+#define ERTS_WAKEUP_OTHER_DEC_SHIFT_HIGH 1
+#define ERTS_WAKEUP_OTHER_DEC_SHIFT_MEDIUM 0
+#define ERTS_WAKEUP_OTHER_DEC_SHIFT_LOW -2
+#define ERTS_WAKEUP_OTHER_DEC_SHIFT_VERY_LOW -5 
+
+#define ERTS_WAKEUP_OTHER_DEC_SHIFT 2
+#define ERTS_WAKEUP_OTHER_FIXED_INC (CONTEXT_REDS/10)
+
+/* To be legacy */
+
+#define ERTS_WAKEUP_OTHER_LIMIT_VERY_HIGH_LEGACY (200*CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_HIGH_LEGACY (50*CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_MEDIUM_LEGACY (10*CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_LOW_LEGACY (CONTEXT_REDS)
+#define ERTS_WAKEUP_OTHER_LIMIT_VERY_LOW_LEGACY (CONTEXT_REDS/10)
+
+#define ERTS_WAKEUP_OTHER_DEC_LEGACY 10
+#define ERTS_WAKEUP_OTHER_FIXED_INC_LEGACY (CONTEXT_REDS/10)
+
+#ifdef ERTS_SMP
+
+static struct {
+    ErtsSchedWakeupOtherThreshold threshold;
+    ErtsSchedWakeupOtherType type;
+    int limit;
+    int dec_shift;
+    int dec_mask;
+    void (*check)(ErtsRunQueue *rq);
+} wakeup_other;
+
+static void
+wakeup_other_check(ErtsRunQueue *rq)
+{
+    int wo_reds = rq->wakeup_other_reds;
+    if (wo_reds) {
+	int left_len = rq->len - 1;
+	if (left_len < 1) {
+	    int wo_reduce = wo_reds << wakeup_other.dec_shift;
+	    wo_reduce &= wakeup_other.dec_mask;
+	    rq->wakeup_other -= wo_reduce;
+	    if (rq->wakeup_other < 0)
+		rq->wakeup_other = 0;
+	}
+	else {
+	    rq->wakeup_other += (left_len*wo_reds
+				 + ERTS_WAKEUP_OTHER_FIXED_INC);
+	    if (rq->wakeup_other > wakeup_other.limit) {
+		int empty_rqs =
+		    erts_smp_atomic32_read_acqb(&no_empty_run_queues);
+		if (empty_rqs != 0)
+		    wake_scheduler_on_empty_runq(rq);
+		rq->wakeup_other = 0;
+	    }
+	}
+	rq->wakeup_other_reds = 0;
+    }
+}
+
+static void
+wakeup_other_set_limit(void)
+{
+    switch (wakeup_other.threshold) {
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_HIGH:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_VERY_HIGH;
+	wakeup_other.dec_shift = ERTS_WAKEUP_OTHER_DEC_SHIFT_VERY_HIGH;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_HIGH:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_HIGH;
+	wakeup_other.dec_shift = ERTS_WAKEUP_OTHER_DEC_SHIFT_HIGH;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_MEDIUM:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_MEDIUM;
+	wakeup_other.dec_shift = ERTS_WAKEUP_OTHER_DEC_SHIFT_MEDIUM;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_LOW:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_LOW;
+	wakeup_other.dec_shift = ERTS_WAKEUP_OTHER_DEC_SHIFT_LOW;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_LOW:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_VERY_LOW;
+	wakeup_other.dec_shift = ERTS_WAKEUP_OTHER_DEC_SHIFT_VERY_LOW;
+	break;
+    }
+    if (wakeup_other.dec_shift < 0)
+	wakeup_other.dec_mask = (1 << (sizeof(wakeup_other.dec_mask)*8
+				       + wakeup_other.dec_shift)) - 1;
+    else {
+	wakeup_other.dec_mask = 0;
+	wakeup_other.dec_mask = ~wakeup_other.dec_mask;
+    }
+}
+
+static void
+wakeup_other_check_legacy(ErtsRunQueue *rq)
+{
+    int wo_reds = rq->wakeup_other_reds;
+    if (wo_reds) {
+	if (rq->len < 2) {
+	    rq->wakeup_other -= ERTS_WAKEUP_OTHER_DEC_LEGACY*wo_reds;
+	    if (rq->wakeup_other < 0)
+		rq->wakeup_other = 0;
+	}
+	else if (rq->wakeup_other < wakeup_other.limit)
+	    rq->wakeup_other += rq->len*wo_reds + ERTS_WAKEUP_OTHER_FIXED_INC_LEGACY;
+	else {
+	    if (erts_smp_atomic32_read_acqb(&no_empty_run_queues) != 0) {
+		wake_scheduler_on_empty_runq(rq);
+		rq->wakeup_other = 0;
+	    }
+	    rq->wakeup_other = 0;
+	}
+    }
+    rq->wakeup_other_reds = 0;
+}
+
+static void
+wakeup_other_set_limit_legacy(void)
+{
+    switch (wakeup_other.threshold) {
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_HIGH:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_VERY_HIGH_LEGACY;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_HIGH:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_HIGH_LEGACY;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_MEDIUM:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_MEDIUM_LEGACY;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_LOW:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_LOW_LEGACY;
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_LOW:
+	wakeup_other.limit = ERTS_WAKEUP_OTHER_LIMIT_VERY_LOW_LEGACY;
+	break;
+    }
+}
+
+static void
+set_wakeup_other_data(void)
+{
+    switch (wakeup_other.type) {
+    case ERTS_SCHED_WAKEUP_OTHER_TYPE_PROPOSAL:
+	wakeup_other.check = wakeup_other_check;
+	wakeup_other_set_limit();
+	break;
+    case ERTS_SCHED_WAKEUP_OTHER_TYPE_LEGACY:
+	wakeup_other.check = wakeup_other_check_legacy;
+	wakeup_other_set_limit_legacy();
+	break;
+    }
+}
+
+#endif
+
 void
 erts_early_init_scheduling(int no_schedulers)
 {
     aux_work_timeout_early_init(no_schedulers);
-    wakeup_other_limit = ERTS_WAKEUP_OTHER_LIMIT_MEDIUM;
+#ifdef ERTS_SMP
+    wakeup_other.threshold = ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_MEDIUM;
+    wakeup_other.type = ERTS_SCHED_WAKEUP_OTHER_TYPE_LEGACY;
+#endif
+    sched_busy_wait.sys_schedule = ERTS_SCHED_SYS_SLEEP_SPINCOUNT_MEDIUM;
+    sched_busy_wait.tse = (ERTS_SCHED_SYS_SLEEP_SPINCOUNT_MEDIUM
+			   * ERTS_SCHED_TSE_SLEEP_SPINCOUNT_FACT);
+    sched_busy_wait.aux_work = (ERTS_SCHED_SYS_SLEEP_SPINCOUNT_MEDIUM
+				* ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_MEDIUM);
 }
 
 int
-erts_sched_set_wakeup_limit(char *str)
+erts_sched_set_wakeup_other_thresold(char *str)
 {
+    ErtsSchedWakeupOtherThreshold threshold;
     if (sys_strcmp(str, "very_high") == 0)
-	wakeup_other_limit = ERTS_WAKEUP_OTHER_LIMIT_VERY_HIGH;
+	threshold = ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_HIGH;
     else if (sys_strcmp(str, "high") == 0)
-	wakeup_other_limit = ERTS_WAKEUP_OTHER_LIMIT_HIGH;
+	threshold = ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_HIGH;
     else if (sys_strcmp(str, "medium") == 0)
-	wakeup_other_limit = ERTS_WAKEUP_OTHER_LIMIT_MEDIUM;
+	threshold = ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_MEDIUM;
     else if (sys_strcmp(str, "low") == 0)
-	wakeup_other_limit = ERTS_WAKEUP_OTHER_LIMIT_LOW;
+	threshold = ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_LOW;
     else if (sys_strcmp(str, "very_low") == 0)
-	wakeup_other_limit = ERTS_WAKEUP_OTHER_LIMIT_VERY_LOW;
+	threshold = ERTS_SCHED_WAKEUP_OTHER_THRESHOLD_VERY_LOW;
     else
 	return EINVAL;
+#ifdef ERTS_SMP
+    wakeup_other.threshold = threshold;
+    set_wakeup_other_data();
+#endif
     return 0;
 }
 
+int
+erts_sched_set_wakeup_other_type(char *str)
+{
+    ErtsSchedWakeupOtherType type;
+    if (sys_strcmp(str, "proposal") == 0)
+	type = ERTS_SCHED_WAKEUP_OTHER_TYPE_PROPOSAL;
+    else if (sys_strcmp(str, "default") == 0)
+	type = ERTS_SCHED_WAKEUP_OTHER_TYPE_LEGACY;
+    else if (sys_strcmp(str, "legacy") == 0)
+	type = ERTS_SCHED_WAKEUP_OTHER_TYPE_LEGACY;
+    else
+	return EINVAL;
+#ifdef ERTS_SMP
+    wakeup_other.type = type;
+#endif
+    return 0;
+}
+
+int
+erts_sched_set_busy_wait_threshold(char *str)
+{
+    int sys_sched;
+    int aux_work_fact;
+
+    if (sys_strcmp(str, "very_long") == 0) {
+	sys_sched = ERTS_SCHED_SYS_SLEEP_SPINCOUNT_VERY_LONG;
+	aux_work_fact = ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_VERY_LONG;
+    }
+    else if (sys_strcmp(str, "long") == 0) {
+	sys_sched = ERTS_SCHED_SYS_SLEEP_SPINCOUNT_LONG;
+	aux_work_fact = ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_LONG;
+    }
+    else if (sys_strcmp(str, "medium") == 0) {
+	sys_sched = ERTS_SCHED_SYS_SLEEP_SPINCOUNT_MEDIUM;
+	aux_work_fact = ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_MEDIUM;
+    }
+    else if (sys_strcmp(str, "short") == 0) {
+	sys_sched = ERTS_SCHED_SYS_SLEEP_SPINCOUNT_SHORT;
+	aux_work_fact = ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_SHORT;
+    }
+    else if (sys_strcmp(str, "very_short") == 0) {
+	sys_sched = ERTS_SCHED_SYS_SLEEP_SPINCOUNT_VERY_SHORT;
+	aux_work_fact = ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_VERY_SHORT;
+    }
+    else if (sys_strcmp(str, "none") == 0) {
+	sys_sched = ERTS_SCHED_SYS_SLEEP_SPINCOUNT_NONE;
+	aux_work_fact = ERTS_SCHED_AUX_WORK_SLEEP_SPINCOUNT_FACT_NONE;
+    }
+    else {
+	return EINVAL;
+    }
+
+    sched_busy_wait.sys_schedule = sys_sched;
+    sched_busy_wait.tse = sys_sched*ERTS_SCHED_TSE_SLEEP_SPINCOUNT_FACT;
+    sched_busy_wait.aux_work = sys_sched*aux_work_fact;
+
+    return 0;
+}
 static void
-init_aux_work_data(ErtsAuxWorkData *awdp, ErtsSchedulerData *esdp)
+init_aux_work_data(ErtsAuxWorkData *awdp, ErtsSchedulerData *esdp, char *dawwp)
 {
     awdp->sched_id = esdp ? (int) esdp->no : 0;
     awdp->esdp = esdp;
@@ -3604,14 +3916,38 @@ init_aux_work_data(ErtsAuxWorkData *awdp, ErtsSchedulerData *esdp)
 #endif
     awdp->async_ready.queue = NULL;
 #endif
+#ifdef ERTS_SMP
+    if (!dawwp) {
+	awdp->delayed_wakeup.job = NULL;
+	awdp->delayed_wakeup.sched2jix = NULL;
+	awdp->delayed_wakeup.jix = -1;
+    }
+    else {
+	int i;
+	awdp->delayed_wakeup.job = (ErtsDelayedAuxWorkWakeupJob *) dawwp;
+	dawwp += sizeof(ErtsDelayedAuxWorkWakeupJob)*(erts_no_schedulers+1);
+	awdp->delayed_wakeup.sched2jix = (int *) dawwp;
+	awdp->delayed_wakeup.jix = -1;
+	for (i = 0; i <= erts_no_schedulers; i++)
+	    awdp->delayed_wakeup.sched2jix[i] = -1;
+    }
+#endif
 }
 
 void
 erts_init_scheduling(int no_schedulers, int no_schedulers_online)
 {
     int ix, n, no_ssi;
+    char *daww_ptr;
+#ifdef ERTS_SMP
+    size_t daww_sz;
+#endif
 
     init_misc_op_list_alloc();
+
+#ifdef ERTS_SMP
+    set_wakeup_other_data();
+#endif
 
     ASSERT(no_schedulers_online <= no_schedulers);
     ASSERT(no_schedulers_online >= 1);
@@ -3738,6 +4074,15 @@ erts_init_scheduling(int no_schedulers, int no_schedulers_online)
 
     /* Create and initialize scheduler specific data */
 
+#ifdef ERTS_SMP
+    daww_sz = ERTS_ALC_CACHE_LINE_ALIGN_SIZE((sizeof(ErtsDelayedAuxWorkWakeupJob)
+					      + sizeof(int))*(n+1));
+    daww_ptr = erts_alloc_permanent_cache_aligned(ERTS_ALC_T_SCHDLR_DATA,
+						  daww_sz*n);
+#else
+    daww_ptr = NULL;
+#endif
+
     erts_aligned_scheduler_data = 
 	erts_alloc_permanent_cache_aligned(ERTS_ALC_T_SCHDLR_DATA,
 					   n*sizeof(ErtsAlignedSchedulerData));					   
@@ -3772,7 +4117,10 @@ erts_init_scheduling(int no_schedulers, int no_schedulers_online)
 	esdp->run_queue = ERTS_RUNQ_IX(ix);
 	esdp->run_queue->scheduler = esdp;
 
-	init_aux_work_data(&esdp->aux_work_data, esdp);
+	init_aux_work_data(&esdp->aux_work_data, esdp, daww_ptr);
+#ifdef ERTS_SMP
+	daww_ptr += daww_sz;
+#endif
 	init_sched_wall_time(&esdp->sched_wall_time);
     }
 
@@ -4170,7 +4518,9 @@ suspend_scheduler(ErtsSchedulerData *esdp)
 			erts_thr_progress_active(esdp, thr_prgr_active = 1);
 			sched_wall_time_change(esdp, 1);
 		    }
-		    aux_work = handle_aux_work(&esdp->aux_work_data, aux_work);
+		    aux_work = handle_aux_work(&esdp->aux_work_data,
+					       aux_work,
+					       1);
 		    if (aux_work && erts_thr_progress_update(esdp))
 			erts_thr_progress_leader_update(esdp);
 		}
@@ -6412,7 +6762,7 @@ Process *schedule(Process *p, int calls)
 		if (leader_update)
 		    erts_thr_progress_leader_update(esdp);
 		if (aux_work)
-		    handle_aux_work(&esdp->aux_work_data, aux_work);
+		    handle_aux_work(&esdp->aux_work_data, aux_work, 0);
 		erts_smp_runq_lock(rq);
 	    }
 	}
@@ -6425,7 +6775,7 @@ Process *schedule(Process *p, int calls)
 	    erts_aint32_t aux_work;
 	    aux_work = erts_atomic32_read_acqb(&esdp->ssi->aux_work);
 	    if (aux_work)
-		handle_aux_work(&esdp->aux_work_data, aux_work);
+		handle_aux_work(&esdp->aux_work_data, aux_work, 0);
 	}
 #endif /* ERTS_SMP */
 
@@ -6502,26 +6852,7 @@ Process *schedule(Process *p, int calls)
 	    exec_misc_ops(rq);
 
 #ifdef ERTS_SMP
-	{
-	    int wo_reds = rq->wakeup_other_reds;
-	    if (wo_reds) {
-		if (rq->len < 2) {
-		    rq->wakeup_other -= ERTS_WAKEUP_OTHER_DEC*wo_reds;
-		    if (rq->wakeup_other < 0)
-			rq->wakeup_other = 0;
-		}
-		else if (rq->wakeup_other < wakeup_other_limit)
-		    rq->wakeup_other += rq->len*wo_reds + ERTS_WAKEUP_OTHER_FIXED_INC;
-		else {
-		    if (erts_smp_atomic32_read_acqb(&no_empty_run_queues) != 0) {
-			wake_scheduler_on_empty_runq(rq);
-			rq->wakeup_other = 0;
-		    }
-		    rq->wakeup_other = 0;
-		}
-	    }
-	    rq->wakeup_other_reds = 0;
-	}
+	wakeup_other.check(rq);
 #endif
 
 	/*
@@ -6685,7 +7016,6 @@ Process *schedule(Process *p, int calls)
 #endif
 	ASSERT(p->status != P_SUSPENDED); /* Never run a suspended process */
 
-        ACTIVATE(p);
 	reds = context_reds;
 
 	if (IS_TRACED(p)) {
@@ -6726,7 +7056,6 @@ Process *schedule(Process *p, int calls)
 	}
 	    
 	p->fcalls = reds;
-	ASSERT(IS_ACTIVE(p));
 	ERTS_SMP_CHK_HAVE_ONLY_MAIN_PROC_LOCK(p);
 	return p;
     }
@@ -7074,9 +7403,7 @@ erl_create_process(Process* parent, /* Parent of process (default group leader).
     ErtsRunQueue *rq, *notify_runq;
     Process *p;
     Sint arity;			/* Number of arguments. */
-#ifndef HYBRID
     Uint arg_size;		/* Size of arguments. */
-#endif
     Uint sz;			/* Needed words on heap. */
     Uint heap_need;		/* Size needed on heap. */
     Eterm res = THE_NON_VALUE;
@@ -7085,17 +7412,6 @@ erl_create_process(Process* parent, /* Parent of process (default group leader).
     erts_smp_proc_lock(parent, ERTS_PROC_LOCKS_ALL_MINOR);
 #endif
 
-#ifdef HYBRID
-    /*
-     * Copy the arguments to the global heap
-     * Since global GC might occur we want to do this before adding the
-     * new process to the process_tab.
-     */
-    BM_SWAP_TIMER(system,copy);
-    LAZY_COPY(parent,args);
-    BM_SWAP_TIMER(copy,system);
-    heap_need = 0;
-#endif /* HYBRID */
     /*
      * Check for errors.
      */
@@ -7118,12 +7434,10 @@ erl_create_process(Process* parent, /* Parent of process (default group leader).
 #endif
     BM_COUNT(processes_spawned);
 
-#ifndef HYBRID
     BM_SWAP_TIMER(system,size);
     arg_size = size_object(args);
     BM_SWAP_TIMER(size,system);
     heap_need = arg_size;
-#endif
 
     p->flags = erts_default_process_flags;
 
@@ -7174,9 +7488,6 @@ erl_create_process(Process* parent, /* Parent of process (default group leader).
     p->heap = (Eterm *) ERTS_HEAP_ALLOC(ERTS_ALC_T_HEAP, sizeof(Eterm)*sz);
     p->old_hend = p->old_htop = p->old_heap = NULL;
     p->high_water = p->heap;
-#ifdef INCREMENTAL
-    p->scan_top = p->high_water;
-#endif
     p->gen_gcs = 0;
     p->stop = p->hend = p->heap + sz;
     p->htop = p->heap;
@@ -7202,19 +7513,10 @@ erl_create_process(Process* parent, /* Parent of process (default group leader).
     BM_STOP_TIMER(system);
     BM_MESSAGE(args,p,parent);
     BM_START_TIMER(system);
-#ifdef HYBRID
-    p->arg_reg[2] = args;
-#ifdef INCREMENTAL
-    p->active = 0;
-    if (ptr_val(args) >= inc_fromspc && ptr_val(args) < inc_fromend)
-        INC_ACTIVATE(p);
-#endif
-#else
     BM_SWAP_TIMER(system,copy);
     p->arg_reg[2] = copy_struct(args, arg_size, &p->htop, &p->off_heap);
     BM_MESSAGE_COPIED(arg_size);
     BM_SWAP_TIMER(copy,system);
-#endif
     p->arity = 3;
 
     p->fvalue = NIL;
@@ -7271,13 +7573,6 @@ erl_create_process(Process* parent, /* Parent of process (default group leader).
     DT_UTAG_FLAGS(p) = 0;
 #endif
     p->parent = parent->id == ERTS_INVALID_PID ? NIL : parent->id;
-
-#ifdef HYBRID
-    p->rrma  = NULL;
-    p->rrsrc = NULL;
-    p->nrr   = 0;
-    p->rrsz  = 0;
-#endif
 
     INIT_HOLE_CHECK(p);
 #ifdef DEBUG
@@ -7346,15 +7641,6 @@ erl_create_process(Process* parent, /* Parent of process (default group leader).
 	erts_add_monitor(&(p->monitors), MON_TARGET, mref, parent->id, NIL);
 	so->mref = mref;
     }
-
-#ifdef HYBRID
-    /*
-     * Add process to the array of active processes.
-     */
-    ACTIVATE(p);
-    p->active_index = erts_num_active_procs++;
-    erts_active_procs[p->active_index] = p;
-#endif
 
 #ifdef ERTS_SMP
     p->scheduler_data = NULL;
@@ -7466,9 +7752,6 @@ void erts_init_empty_process(Process *p)
     p->reg = NULL;
     p->heap_sz = 0;
     p->high_water = NULL;
-#ifdef INCREMENTAL
-    p->scan_top = NULL;
-#endif
     p->old_hend = NULL;
     p->old_htop = NULL;
     p->old_heap = NULL;
@@ -7520,14 +7803,6 @@ void erts_init_empty_process(Process *p)
 #endif
 #endif
 
-    ACTIVATE(p);
-
-#ifdef HYBRID
-    p->rrma  = NULL;
-    p->rrsrc = NULL;
-    p->nrr   = 0;
-    p->rrsz  = 0;
-#endif
     INIT_HOLE_CHECK(p);
 #ifdef DEBUG
     p->last_old_htop = NULL;
@@ -7575,9 +7850,6 @@ erts_debug_verify_clean_empty_process(Process* p)
     ASSERT(p->reg == NULL);
     ASSERT(p->heap_sz == 0);
     ASSERT(p->high_water == NULL);
-#ifdef INCREMENTAL
-    ASSERT(p->scan_top == NULL);
-#endif
     ASSERT(p->old_hend == NULL);
     ASSERT(p->old_htop == NULL);
     ASSERT(p->old_heap == NULL);
@@ -7725,22 +7997,6 @@ delete_process(Process* p)
     ASSERT(!p->suspend_monitors);
 
     p->fvalue = NIL;
-
-#ifdef HYBRID
-    erts_active_procs[p->active_index] =
-        erts_active_procs[--erts_num_active_procs];
-    erts_active_procs[p->active_index]->active_index = p->active_index;
-#ifdef INCREMENTAL
-    if (INC_IS_ACTIVE(p))
-         INC_DEACTIVATE(p);
-#endif
-
-    if (p->rrma != NULL) {
-        erts_free(ERTS_ALC_T_ROOTSET,p->rrma);
-        erts_free(ERTS_ALC_T_ROOTSET,p->rrsrc);
-    }
-#endif
-
 }
 
 static ERTS_INLINE void
@@ -8112,7 +8368,6 @@ send_exit_signal(Process *c_p,		/* current process if and only
 	    set_proc_exiting(rp,
 			     is_immed(rsn) ? rsn : copy_object(rsn, rp),
 			     NULL);
-	    ACTIVATE(rp);
 	    if (old_status != P_RUNABLE && old_status != P_RUNNING)
 		erts_add_to_runq(rp);
 	}

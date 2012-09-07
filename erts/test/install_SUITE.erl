@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2010-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2010-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -452,7 +452,7 @@ bin_dirname_fail(Config) when is_list(Config) ->
     ?line Be = Bs,
     ?line EBs = "/opt/lib/erlang/otp/bin",
     ?line EBe = EBs,
-    ?line CMDPRFX = "PATH="++?config(data_dir,Config)++":"++os:getenv("PATH"),
+    ?line CMDPRFX = "PATH=\""++?config(data_dir,Config)++":"++os:getenv("PATH")++"\"",
     ChkRes = fun (Res, #inst{test_prefix = TP,
 			     destdir = D,
 			     extra_prefix = EP,
@@ -485,7 +485,7 @@ bin_no_use_dirname_fail(Config) when is_list(Config) ->
     ?line EBs = "/opt/lib/erlang/otp/bin",
     ?line EBe = EBs,
     ?line RP = "../lib/erlang/otp/bin",
-    ?line CMDPRFX = "PATH="++?config(data_dir,Config)++":"++os:getenv("PATH"),
+    ?line CMDPRFX = "PATH=\""++?config(data_dir,Config)++":"++os:getenv("PATH")++"\"",
     ChkRes = fun (Res, #inst{test_prefix = TP,
 			     destdir = D,
 			     extra_prefix = EP,

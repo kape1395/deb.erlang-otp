@@ -2,7 +2,7 @@
 %%-------------------------------------------------------------------
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2006-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2006-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -188,6 +188,7 @@ plt_common(#options{init_plts = [InitPlt]} = Opts, RemoveFiles, AddFiles) ->
     ok ->
       case Opts#options.output_plt of
 	none -> ok;
+	InitPlt -> ok;
 	OutPlt ->
 	  {ok, Binary} = file:read_file(InitPlt),
 	  ok = file:write_file(OutPlt, Binary)
@@ -393,10 +394,12 @@ do_analysis(Files, Options, Plt, PltInfo) ->
 			   defines = Options#options.defines,
 			   include_dirs = Options#options.include_dirs,
 			   files = Files,
-			   start_from = Options#options.from, 
+			   start_from = Options#options.from,
+			   timing = Options#options.timing,
 			   plt = Plt,
 			   use_contracts = Options#options.use_contracts,
-			   callgraph_file = Options#options.callgraph_file},
+			   callgraph_file = Options#options.callgraph_file,
+                           solvers = Options#options.solvers},
   State3 = start_analysis(State2, InitAnalysis),
   {T1, _} = statistics(wall_clock),
   Return = cl_loop(State3),

@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2005-2009. All Rights Reserved.
+ * Copyright Ericsson AB 2005-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -44,8 +44,8 @@
 #endif
 
 #ifdef __WIN32__
-#define signed_long_long	LONGLONG
-#define unsigned_long_long	ULONGLONG
+#define signed_long_long	__int64
+#define unsigned_long_long	unsigned __int64
 #else
 #define signed_long_long	signed long long
 #define unsigned_long_long	unsigned long long
