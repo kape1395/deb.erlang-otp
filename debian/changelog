@@ -1,3 +1,9 @@
+erlang-otp (15B02-1) precise; urgency=low
+
+  * Packaging Erlang/OTP R15B02.
+
+ -- Karolis Petrauskas <k.petrauskas@gmail.com>  Fri, 07 Sep 2012 19:32:20 +0300
+
 erlang-otp (15B01-1) squeeze; urgency=low
 
   * Packaging Erlang/OTP R15B01.
