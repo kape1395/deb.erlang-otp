@@ -1,6 +1,6 @@
 {application, public_key,
   [{description, "Public key infrastructure"},
-   {vsn, "0.15"},
+   {vsn, "0.16"},
    {modules, [	  public_key,
 		  pubkey_pem,
 		  pubkey_pbe,	

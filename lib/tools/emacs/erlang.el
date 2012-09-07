@@ -1,7 +1,7 @@
 ;; erlang.el --- Major modes for editing and running Erlang
 ;; %CopyrightBegin%
 ;;
-;; Copyright Ericsson AB 1996-2011. All Rights Reserved.
+;; Copyright Ericsson AB 1996-2012. All Rights Reserved.
 ;;
 ;; The contents of this file are subject to the Erlang Public License,
 ;; Version 1.1, (the "License"); you may not use this file except in
@@ -1516,7 +1516,7 @@ Other commands:
           ;; A dollar sign right before the double quote that ends a
           ;; string is not a character escape.
           ;;
-          ;; And a "string" has with a double quote not escaped by a
+          ;; And a "string" consists of a double quote not escaped by a
           ;; dollar sign, any number of non-backslash non-newline
           ;; characters or escaped backslashes, a dollar sign
           ;; (otherwise we wouldn't care) and a double quote.  This
@@ -1525,6 +1525,8 @@ Other commands:
           ;; know whether matching started inside a string: limiting
           ;; search to a single line keeps things sane.
           . (("\\(?:^\\|[^$]\\)\"\\(?:[^\"\n]\\|\\\\\"\\)*\\(\\$\\)\"" 1 "w")
+	     ;; Likewise for atoms
+	     ("\\(?:^\\|[^$]\\)'\\(?:[^'\n]\\|\\\\'\\)*\\(\\$\\)'" 1 "w")
              ;; And the dollar sign in $\" escapes two characters, not
              ;; just one.
              ("\\(\\$\\)\\\\\\\"" 1 "'"))))))
@@ -2986,18 +2988,52 @@ This assumes that the preceding expression is either simple
     (forward-sexp (- arg))
     (let ((col (current-column)))
       (skip-chars-backward " \t")
-      ;; Needed to match the colon in "'foo':'bar'".
-      (if (not (memq (preceding-char) '(?# ?:)))
-          col
-        ;; Special hack to handle: (note line break)
-        ;; [#myrecord{
-        ;;  foo = foo}]
-        (or
-         (ignore-errors
-           (backward-char 1)
-           (forward-sexp -1)
-           (current-column))
-         col)))))
+      ;; Special hack to handle: (note line break)
+      ;; [#myrecord{
+      ;;  foo = foo}]
+      ;; where the call (forward-sexp -1) will fail when point is at the `#'.
+      (or
+       (ignore-errors
+	 ;; Needed to match the colon in "'foo':'bar'".
+	 (cond ((eq (preceding-char) ?:)
+		(backward-char 1)
+		(forward-sexp -1)
+		(current-column))
+	       ((eq  (preceding-char) ?#)
+		;; We may now be at:
+		;; - either a construction of a new record
+		;; - or update of a record, in which case we want
+		;;   the column of the expression to be updated.
+		;;
+		;; To see which of the two cases we are at, we first
+		;; move an expression backwards, check for keywords,
+		;; then immediately an expression forwards.  Moving
+		;; backwards skips past tokens like `,' or `->', but
+		;; when moving forwards again, we won't skip past such
+		;; tokens.  We use this: if, after having moved
+		;; forwards, we're back where we started, then it was
+		;; a record update.
+		;; The check for keywords is to detect cases like:
+		;;   case Something of #record_construction{...}
+		(backward-char 1)
+		(let ((record-start (point))
+		      (record-start-col (current-column)))
+		  (forward-sexp -1)
+		  (let ((preceding-expr-col (current-column))
+			;; white space definition according to erl_scan
+			(white-space "\000-\040\200-\240"))
+		    (if (erlang-at-keyword)
+			;; The (forward-sexp -1) call moved past a keyword
+			(1+ record-start-col)
+		      (forward-sexp 1)
+		      (skip-chars-forward white-space record-start)
+		      ;; Are we back where we started?  If so, it was an update.
+		      (if (= (point) record-start)
+			    preceding-expr-col
+			(goto-char record-start)
+			(1+ (current-column)))))))
+	       (t col)))
+       col))))
 
 (defun erlang-indent-parenthesis (stack-position) 
   (let ((previous (erlang-indent-find-preceding-expr)))

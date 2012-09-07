@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 1997-2011. All Rights Reserved.
+# Copyright Ericsson AB 1997-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -196,13 +196,13 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 release_spec:
 
 release_tests_spec: make_emakefile
-	$(INSTALL_DIR) $(RELSYSDIR)
+	$(INSTALL_DIR) "$(RELSYSDIR)"
 	$(INSTALL_DATA) $(EMAKEFILE) $(TEST_SPEC_FILES) \
-		$(ERL_FILES) $(RELSYSDIR)
-	$(INSTALL_DATA) $(NO_OPT_ERL_FILES) $(RELSYSDIR)
-	$(INSTALL_DATA) $(NATIVE_ERL_FILES) $(RELSYSDIR)
-	chmod -R u+w $(RELSYSDIR)
-	tar cf - *_SUITE_data | (cd $(RELSYSDIR); tar xf -)
+		$(ERL_FILES) "$(RELSYSDIR)"
+	$(INSTALL_DATA) $(NO_OPT_ERL_FILES) "$(RELSYSDIR)"
+	$(INSTALL_DATA) $(NATIVE_ERL_FILES) "$(RELSYSDIR)"
+	chmod -R u+w "$(RELSYSDIR)"
+	tar cf - *_SUITE_data | (cd "$(RELSYSDIR)"; tar xf -)
 
 release_docs_spec:
 

@@ -68,7 +68,7 @@ Options:
 "
 
 ERL_HOME=<path to otp top dir>
-MEGACO_HOME=$ERL_HOME/lib/erlang/lib/megaco-3.16.0.1
+MEGACO_HOME=$ERL_HOME/lib/erlang/lib/megaco-3.16.0.2
 MEAS_HOME=$MEGACO_HOME/examples/meas
 PATH=$ERL_HOME/bin:$PATH
 

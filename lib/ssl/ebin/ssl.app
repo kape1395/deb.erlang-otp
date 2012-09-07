@@ -1,6 +1,6 @@
 {application, ssl,
    [{description, "Erlang/OTP SSL application"},
-    {vsn, "5.0.1"},
+    {vsn, "5.1"},
     {modules, [ssl,
 	       ssl_app,
 	       ssl_sup,

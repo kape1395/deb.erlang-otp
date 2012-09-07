@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 2006-2009. All Rights Reserved.
+%% Copyright Ericsson AB 2006-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -31,7 +31,7 @@
 
 %% API
 -export([start_link/0, add_handler/0, add_handler/1, stop/0]).
--export([notify/1, sync_notify/1]).
+-export([notify/1, notify/2, sync_notify/1,sync_notify/2]).
 -export([is_alive/0]).
 
 %% gen_event callbacks
@@ -90,6 +90,13 @@ notify(Event) ->
     end.
 
 %%--------------------------------------------------------------------
+%% Function: notify(Name,Data) -> ok
+%% Description: Asynchronous notification to event manager.
+%%--------------------------------------------------------------------
+notify(Name, Data) ->
+    notify(#event{ name = Name, data = Data}).
+
+%%--------------------------------------------------------------------
 %% Function: sync_notify(Event) -> ok
 %% Description: Synchronous notification to event manager.
 %%--------------------------------------------------------------------
@@ -100,6 +107,13 @@ sync_notify(Event) ->
 	Result ->
 	    Result
     end.
+
+%%--------------------------------------------------------------------
+%% Function: sync_notify(Name,Data) -> ok
+%% Description: Synchronous notification to event manager.
+%%--------------------------------------------------------------------
+sync_notify(Name,Data) ->
+    sync_notify(#event{ name = Name, data = Data}).
 
 %%--------------------------------------------------------------------
 %% Function: is_alive() -> true | false

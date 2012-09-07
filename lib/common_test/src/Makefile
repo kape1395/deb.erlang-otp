@@ -70,14 +70,18 @@ MODULES= \
         ct_hooks\
         ct_hooks_lock\
 	cth_log_redirect\
-	cth_surefire
+	cth_surefire \
+	ct_netconfc \
+	ct_conn_log_h \
+	cth_conn_log
 
 TARGET_MODULES= $(MODULES:%=$(EBIN)/%)
 BEAM_FILES= $(MODULES:%=$(EBIN)/%.$(EMULATOR))
 
 ERL_FILES= $(MODULES:=.erl)
 HRL_FILES = \
-	ct_util.hrl
+	ct_util.hrl \
+	ct_netconfc.hrl
 EXTERNAL_HRL_FILES = \
 	../include/ct.hrl \
 	../include/ct_event.hrl
@@ -133,12 +137,12 @@ $(APPUP_TARGET): $(APPUP_SRC) ../vsn.mk
 include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt
-	$(INSTALL_DIR) $(RELSYSDIR)/src
-	$(INSTALL_DATA) $(ERL_FILES) $(HRL_FILES) $(RELSYSDIR)/src
-	$(INSTALL_DIR) $(RELSYSDIR)/ebin
-	$(INSTALL_DATA) $(TARGET_FILES) $(RELSYSDIR)/ebin
-	$(INSTALL_DIR) $(RELSYSDIR)/include
-	$(INSTALL_DATA) $(EXTERNAL_HRL_FILES) $(RELSYSDIR)/include
+	$(INSTALL_DIR) "$(RELSYSDIR)/src"
+	$(INSTALL_DATA) $(ERL_FILES) $(HRL_FILES) "$(RELSYSDIR)/src"
+	$(INSTALL_DIR) "$(RELSYSDIR)/ebin"
+	$(INSTALL_DATA) $(TARGET_FILES) "$(RELSYSDIR)/ebin"
+	$(INSTALL_DIR) "$(RELSYSDIR)/include"
+	$(INSTALL_DATA) $(EXTERNAL_HRL_FILES) "$(RELSYSDIR)/include"
 
 release_tests_spec: opt
 	$(INSTALL_DIR) $(RELEASE_PATH)/common_test_test

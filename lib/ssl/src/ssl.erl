@@ -25,12 +25,13 @@
 
 -export([start/0, start/1, stop/0, transport_accept/1,
 	 transport_accept/2, ssl_accept/1, ssl_accept/2, ssl_accept/3,
-	 cipher_suites/0, cipher_suites/1, close/1, shutdown/2,
+	 cipher_suites/0, cipher_suites/1, suite_definition/1,
+	 close/1, shutdown/2,
 	 connect/3, connect/2, connect/4, connection_info/1,
 	 controlling_process/2, listen/2, pid/1, peername/1, peercert/1,
 	 recv/2, recv/3, send/2, getopts/2, setopts/2, sockname/1,
 	 versions/0, session_info/1, format_error/1,
-	 renegotiate/1, prf/5]).
+	 renegotiate/1, prf/5, clear_pem_cache/0, random_bytes/1]).
 
 -deprecated({pid, 1, next_major_release}).
 
@@ -304,6 +305,15 @@ peercert(#sslsocket{pid = Pid}) ->
     end.
 
 %%--------------------------------------------------------------------
+-spec suite_definition(cipher_suite()) -> erl_cipher_suite().
+%%
+%% Description: Return erlang cipher suite definition.
+%%--------------------------------------------------------------------
+suite_definition(S) ->
+    {KeyExchange, Cipher, Hash, _} = ssl_cipher:suite_definition(S),
+    {KeyExchange, Cipher, Hash}.
+
+%%--------------------------------------------------------------------
 -spec cipher_suites() -> [erl_cipher_suite()].
 -spec cipher_suites(erlang | openssl) -> [erl_cipher_suite()] | [string()].
 			   
@@ -314,7 +324,7 @@ cipher_suites() ->
   
 cipher_suites(erlang) ->
     Version = ssl_record:highest_protocol_version([]),
-    [ssl_cipher:suite_definition(S) || S <- ssl_cipher:suites(Version)];    
+    [suite_definition(S) || S <- ssl_cipher:suites(Version)];
 
 cipher_suites(openssl) ->
     Version = ssl_record:highest_protocol_version([]),
@@ -408,7 +418,7 @@ session_info(#sslsocket{pid = Pid, fd = new_ssl}) ->
 versions() ->
     Vsns = ssl_record:supported_protocol_versions(),
     SupportedVsns = [ssl_record:protocol_version(Vsn) || Vsn <- Vsns],
-    AvailableVsns = ?DEFAULT_SUPPORTED_VERSIONS,
+    AvailableVsns = ?ALL_SUPPORTED_VERSIONS,
     [{ssl_app, ?VSN}, {supported, SupportedVsns}, {available, AvailableVsns}].
 
 
@@ -430,6 +440,15 @@ renegotiate(#sslsocket{pid = Pid, fd = new_ssl}) ->
 prf(#sslsocket{pid = Pid, fd = new_ssl},
     Secret, Label, Seed, WantedLength) ->
     ssl_connection:prf(Pid, Secret, Label, Seed, WantedLength).
+
+
+%%--------------------------------------------------------------------
+-spec clear_pem_cache() -> ok.
+%%
+%% Description: Clear the PEM cache
+%%--------------------------------------------------------------------
+clear_pem_cache() ->
+    ssl_manager:clear_pem_cache().
 
 %%---------------------------------------------------------------
 -spec format_error({error, term()}) -> list().
@@ -464,6 +483,23 @@ format_error(Error) ->
         Other ->
             Other
     end.
+
+%%--------------------------------------------------------------------
+-spec random_bytes(integer()) -> binary().
+
+%%
+%% Description: Generates cryptographically secure random sequence if possible
+%% fallbacks on pseudo random function
+%%--------------------------------------------------------------------
+random_bytes(N) ->
+    try crypto:strong_rand_bytes(N) of
+	RandBytes ->
+	    RandBytes
+    catch
+	error:low_entropy ->
+	    crypto:rand_bytes(N)
+    end.
+
 
 %%%--------------------------------------------------------------
 %%% Internal functions
@@ -532,7 +568,7 @@ handle_options(Opts0, _Role) ->
 		throw({error, {eoptions, {verify, Value}}})
 	end,
 
-    CertFile = handle_option(certfile, Opts, ""),
+    CertFile = handle_option(certfile, Opts, <<>>),
     
     SSLOptions = #ssl_options{
       versions   = handle_option(versions, Opts, []),
@@ -619,8 +655,12 @@ validate_option(depth, Value) when is_integer(Value),
 validate_option(cert, Value) when Value == undefined;
                                  is_binary(Value) ->
     Value;
-validate_option(certfile, Value) when Value == undefined; is_list(Value) ->
+validate_option(certfile, undefined = Value) ->
     Value;
+validate_option(certfile, Value) when is_binary(Value) ->
+    Value;
+validate_option(certfile, Value) when is_list(Value) ->
+    list_to_binary(Value);
 
 validate_option(key, undefined) ->
     undefined;
@@ -631,8 +671,13 @@ validate_option(key, {KeyType, Value}) when is_binary(Value),
 					    KeyType == 'DSAPrivateKey';
 					    KeyType == 'PrivateKeyInfo' ->
     {KeyType, Value};
-validate_option(keyfile, Value) when is_list(Value) ->
+
+validate_option(keyfile, undefined) ->
+   <<>>;
+validate_option(keyfile, Value) when is_binary(Value) ->
     Value;
+validate_option(keyfile, Value) when is_list(Value), Value =/= "" ->
+    list_to_binary(Value);
 validate_option(password, Value) when is_list(Value) ->
     Value;
 
@@ -642,16 +687,20 @@ validate_option(cacerts, Value) when Value == undefined;
 %% certfile must be present in some cases otherwhise it can be set
 %% to the empty string.
 validate_option(cacertfile, undefined) ->
-    "";
-validate_option(cacertfile, Value) when is_list(Value), Value =/= "" ->
+   <<>>;
+validate_option(cacertfile, Value) when is_binary(Value) ->
     Value;
+validate_option(cacertfile, Value) when is_list(Value), Value =/= ""->
+    list_to_binary(Value);
 validate_option(dh, Value) when Value == undefined;
 				is_binary(Value) ->
     Value;
 validate_option(dhfile, undefined = Value)  ->
     Value;
-validate_option(dhfile, Value) when is_list(Value), Value =/= "" ->
+validate_option(dhfile, Value) when is_binary(Value) ->
     Value;
+validate_option(dhfile, Value) when is_list(Value), Value =/= "" ->
+    list_to_binary(Value);
 validate_option(ciphers, Value)  when is_list(Value) ->
     Version = ssl_record:highest_protocol_version([]),
     try cipher_suites(Version, Value)
@@ -687,7 +736,8 @@ validate_option(Opt, Value) ->
     
 validate_versions([], Versions) ->
     Versions;
-validate_versions([Version | Rest], Versions) when Version == 'tlsv1.1'; 
+validate_versions([Version | Rest], Versions) when Version == 'tlsv1.2';
+                                                   Version == 'tlsv1.1';
                                                    Version == tlsv1; 
                                                    Version == sslv3 ->
     validate_versions(Rest, Versions);					   

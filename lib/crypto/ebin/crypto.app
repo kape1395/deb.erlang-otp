@@ -18,7 +18,7 @@
 %%
 {application, crypto,
    [{description, "CRYPTO version 2"},
-    {vsn, "2.1"},
+    {vsn, "2.2"},
     {modules, [crypto,
 	       crypto_app,
 	       crypto_sup,

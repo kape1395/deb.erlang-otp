@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 1997-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1997-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -458,8 +458,18 @@ static void error(char* err_msg) {
    * if we get error here we have trouble,
    * silence unnecessary warnings
    */
-  if(write(FD_ERR, err_msg, strlen(err_msg)));
-  if(write(FD_ERR, "\n", 1));
+  char buffer[256] = "[os_mon] cpu supervisor port (cpu_sup): ";
+  int i = strlen(buffer), j = 0;
+  int n = strlen(err_msg);
+
+  while(i < 253 && j < n) {
+      buffer[i++] = err_msg[j++];
+  }
+  buffer[i++] = '\r';
+  buffer[i++] = '\n';
+
+  /* try to use one write only */
+  if(write(FD_ERR, buffer, i));
   exit(-1);
 }
 

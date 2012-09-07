@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 1999-2011. All Rights Reserved.
+# Copyright Ericsson AB 1999-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -37,6 +37,9 @@ RELSYSDIR = $(RELEASE_PATH)/lib/ssl-$(VSN)
 # Common Macros
 # ----------------------------------------------------
 
+BEHAVIOUR_MODULES= \
+        ssl_session_cache_api
+
 MODULES= \
 	ssl \
 	ssl_alert \
@@ -53,7 +56,6 @@ MODULES= \
 	ssl_handshake \
 	ssl_manager \
 	ssl_session \
-        ssl_session_cache_api \
 	ssl_session_cache \
 	ssl_record \
 	ssl_ssl2 \
@@ -66,9 +68,14 @@ INTERNAL_HRL_FILES = \
 	 ssl_alert.hrl ssl_cipher.hrl ssl_handshake.hrl ssl_internal.hrl \
 	 ssl_record.hrl
 
-ERL_FILES= $(MODULES:%=%.erl)
+ERL_FILES= \
+	$(MODULES:%=%.erl) \
+	$(BEHAVIOUR_MODULES:%=%.erl)
+
 
 TARGET_FILES= $(MODULES:%=$(EBIN)/%.$(EMULATOR))
+
+BEHAVIOUR_TARGET_FILES= $(BEHAVIOUR_MODULES:%=$(EBIN)/%.$(EMULATOR))
 
 APP_FILE= ssl.app
 APPUP_FILE= ssl.appup
@@ -83,6 +90,7 @@ APPUP_TARGET= $(EBIN)/$(APPUP_FILE)
 # ----------------------------------------------------
 EXTRA_ERLC_FLAGS = +warn_unused_vars
 ERL_COMPILE_FLAGS += -I$(ERL_TOP)/lib/kernel/src \
+	-pz $(EBIN) \
 	-pz $(ERL_TOP)/lib/public_key/ebin \
 	$(EXTRA_ERLC_FLAGS) -DVSN=\"$(VSN)\"
 
@@ -90,6 +98,8 @@ ERL_COMPILE_FLAGS += -I$(ERL_TOP)/lib/kernel/src \
 # ----------------------------------------------------
 # Targets
 # ----------------------------------------------------
+
+$(TARGET_FILES): $(BEHAVIOUR_TARGET_FILES)
 
 debug opt: $(TARGET_FILES) $(APP_TARGET) $(APPUP_TARGET) 
 
@@ -105,23 +115,18 @@ $(APPUP_TARGET):	$(APPUP_SRC) ../vsn.mk
 
 docs:
 
+
 # ----------------------------------------------------
 # Release Target
 # ---------------------------------------------------- 
 include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt
-	$(INSTALL_DIR) $(RELSYSDIR)/src
-	$(INSTALL_DATA) $(ERL_FILES) $(INTERNAL_HRL_FILES) $(RELSYSDIR)/src
-	$(INSTALL_DIR) $(RELSYSDIR)/ebin
-	$(INSTALL_DATA) $(TARGET_FILES) $(APP_TARGET) \
-	$(APPUP_TARGET) $(RELSYSDIR)/ebin
+	$(INSTALL_DIR) "$(RELSYSDIR)/src"
+	$(INSTALL_DATA) $(ERL_FILES) $(INTERNAL_HRL_FILES) "$(RELSYSDIR)/src"
+	$(INSTALL_DIR) "$(RELSYSDIR)/ebin"
+	$(INSTALL_DATA) $(BEHAVIOUR_TARGET_FILES) $(TARGET_FILES) $(APP_TARGET) \
+	$(APPUP_TARGET) "$(RELSYSDIR)/ebin"
 
 release_docs_spec:
-
-
-
-
-
-
 

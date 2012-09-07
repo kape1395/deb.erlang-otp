@@ -19,8 +19,8 @@
 
 {application, diameter,
  [{description, "Diameter protocol"},
-  {vsn, "1.1"},
-  {modules, [diameter,diameter_app,diameter_callback,diameter_capx,diameter_config,diameter_codec,diameter_dict,diameter_lib,diameter_misc_sup,diameter_peer,diameter_peer_fsm,diameter_peer_fsm_sup,diameter_reg,diameter_service,diameter_service_sup,diameter_session,diameter_stats,diameter_sup,diameter_sync,diameter_types,diameter_watchdog,diameter_watchdog_sup,diameter_etcp,diameter_etcp_sup,diameter_tcp,diameter_tcp_sup,diameter_sctp,diameter_sctp_sup,diameter_transport_sup,diameter_gen_base_rfc3588,diameter_gen_base_accounting,diameter_gen_relay]},
+  {vsn, "1.2"},
+  {modules, [diameter,diameter_app,diameter_callback,diameter_capx,diameter_config,diameter_codec,diameter_dict,diameter_lib,diameter_misc_sup,diameter_peer,diameter_peer_fsm,diameter_peer_fsm_sup,diameter_reg,diameter_service,diameter_service_sup,diameter_session,diameter_stats,diameter_sup,diameter_sync,diameter_types,diameter_watchdog,diameter_watchdog_sup,diameter_etcp,diameter_etcp_sup,diameter_tcp,diameter_tcp_sup,diameter_sctp,diameter_sctp_sup,diameter_transport,diameter_transport_sup,diameter_gen_base_rfc3588,diameter_gen_base_accounting,diameter_gen_relay]},
   {registered, []},
   {applications, [stdlib, kernel]},
   {env, []},

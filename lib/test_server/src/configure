@@ -3638,7 +3638,7 @@ fi
 
 echo "$as_me:$LINENO: checking system version (for dynamic loading)" >&5
 echo $ECHO_N "checking system version (for dynamic loading)... $ECHO_C" >&6
-system=`uname -s`-`uname -r`
+system=`./config.sub $host`
 echo "$as_me:$LINENO: result: $system" >&5
 echo "${ECHO_T}$system" >&6
 
@@ -3719,10 +3719,9 @@ fi
 # Step 3: set configuration options based on system name and version.
 
 SHLIB_LDLIBS=
-
 fullSrcDir=`cd $srcdir; pwd`
 case $system in
-    Linux*)
+    *-linux-*)
 	SHLIB_CFLAGS="-fPIC"
 	SHLIB_SUFFIX=".so"
 	if test "$have_dl" = yes; then
@@ -3877,7 +3876,7 @@ fi
 	fi
 	SHLIB_EXTRACT_ALL=""
 	;;
-    NetBSD-*|FreeBSD-*|OpenBSD-*|DragonFly*)
+    *-netbsd*|*-freebsd*|*-openbsd*|*-dragonfly*)
 	# Not available on all versions:  check for include file.
 	if test "${ac_cv_header_dlfcn_h+set}" = set; then
   echo "$as_me:$LINENO: checking for dlfcn.h" >&5
@@ -4039,28 +4038,21 @@ fi
 
 	SHLIB_EXTRACT_ALL=""
 	;;
-    SunOS-4*)
-	SHLIB_CFLAGS="-PIC"
-	SHLIB_LD="ld"
-	SHLIB_LDFLAGS="$LDFLAGS"
-	SHLIB_SUFFIX=".so"
-	SHLIB_EXTRACT_ALL=""
-	;;
-    SunOS-5*|UNIX_SV-4.2*)
+    *-solaris2*|*-sysv4*)
 	SHLIB_CFLAGS="-KPIC"
 	SHLIB_LD="/usr/ccs/bin/ld"
 	SHLIB_LDFLAGS="$LDFLAGS -G -z text"
 	SHLIB_SUFFIX=".so"
 	SHLIB_EXTRACT_ALL="-z allextract"
 	;;
-    Darwin*)
+    *darwin*)
 	SHLIB_CFLAGS="-fno-common"
 	SHLIB_LD="cc"
 	SHLIB_LDFLAGS="$LDFLAGS -bundle -flat_namespace -undefined suppress"
 	SHLIB_SUFFIX=".so"
 	SHLIB_EXTRACT_ALL=""
 	;;
-    OSF1*)
+    *osf1*)
 	SHLIB_CFLAGS="-fPIC"
 	SHLIB_LD="ld"
 	SHLIB_LDFLAGS="$LDFLAGS -shared"
@@ -4094,19 +4086,19 @@ esac
 
 if test "$CC" = "gcc" -o `$CC -v 2>&1 | grep -c gcc` != "0" ; then
 	case $system in
-	    AIX-*)
+	    *-aix)
 		;;
-	    BSD/OS*)
+	    *-bsd*)
 		;;
-	    IRIX*)
+	    *-irix)
 		;;
-	    NetBSD-*|FreeBSD-*|OpenBSD-*)
+	    *-netbsd|*-freebsd|*-openbsd)
 		;;
-	    RISCos-*)
+	    *-riscos)
 		;;
-	    ULTRIX-4.*)
+	    *ultrix4.*)
 		;;
-	    Darwin*)
+	    *darwin*)
 		;;
 	    *)
 		SHLIB_CFLAGS="-fPIC"

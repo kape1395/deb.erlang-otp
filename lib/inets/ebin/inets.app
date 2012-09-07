@@ -19,7 +19,7 @@
 
 {application,inets,
  [{description, "INETS  CXC 138 49"},
-  {vsn, "5.9"},
+  {vsn, "5.9.1"},
   {modules,[
             inets,
             inets_sup,

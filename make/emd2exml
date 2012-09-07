@@ -330,9 +330,9 @@ text(Line) ->
     text(Line, []).
 
 text("%ERTS-VSN%" ++ Cs, Acc) ->
-    text(Cs, ["5.9.1"|Acc]);
+    text(Cs, ["5.9.2"|Acc]);
 text("%OTP-REL%" ++ Cs, Acc) ->
-    text(Cs, ["R15B01"|Acc]);
+    text(Cs, ["R15B02"|Acc]);
 
 text([$\\,C|Cs], Acc) ->
     text(Cs, [C|Acc]);
@@ -353,9 +353,9 @@ put_text(#state{c = CTag, emphasis = EmTag} = S, Line) ->
     put_text(S, Line, CTag, EmTag, []).
 
 put_text(S, "%ERTS-VSN%"++Cs, CTag, EmTag, Acc) ->
-    put_text(S, Cs, CTag, EmTag, ["5.9.1"|Acc]);
+    put_text(S, Cs, CTag, EmTag, ["5.9.2"|Acc]);
 put_text(S, "%OTP-REL%"++Cs, CTag, EmTag, Acc) ->
-    put_text(S, Cs, CTag, EmTag, ["R15B01"|Acc]);
+    put_text(S, Cs, CTag, EmTag, ["R15B02"|Acc]);
 
 put_text(S, [$\\,C|Cs], no, EmTag, Acc) ->
     put_text(S, Cs, no, EmTag, [C|Acc]);
@@ -556,9 +556,9 @@ code(Line) ->
     code(Line, []).
 
 code("%ERTS-VSN%" ++ Cs, Acc) ->
-    code(Cs, ["5.9.1"|Acc]);
+    code(Cs, ["5.9.2"|Acc]);
 code("%OTP-REL%" ++ Cs, Acc) ->
-    code(Cs, ["R15B01"|Acc]);
+    code(Cs, ["R15B02"|Acc]);
 
 code([$<|Cs], Acc) ->
     code(Cs, ["&lt;"|Acc]);

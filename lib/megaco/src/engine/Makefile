@@ -1,7 +1,7 @@
 # 
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 1999-2009. All Rights Reserved.
+# Copyright Ericsson AB 1999-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -42,9 +42,14 @@ RELSYSDIR = $(RELEASE_PATH)/lib/megaco-$(VSN)
 
 include modules.mk
 
-ERL_FILES = $(MODULES:%=%.erl)	
+ERL_FILES = \
+	$(MODULES:%=%.erl) \
+	$(BEHAVIOUR_MODULES:%=%.erl)
 
-TARGET_FILES =  \
+BEHAVIOUR_TARGET_FILES= \
+	$(BEHAVIOUR_MODULES:%=$(EBIN)/%.$(EMULATOR))
+
+TARGET_FILES = \
 	$(MODULES:%=$(EBIN)/%.$(EMULATOR))
 
 
@@ -65,19 +70,23 @@ ERL_COMPILE_FLAGS += \
 # ----------------------------------------------------
 # Targets
 # ----------------------------------------------------
+
+$(TARGET_FILES): $(BEHAVIOUR_TARGET_FILES)
+
 debug:
 	@${MAKE} TYPE=debug opt
 
 opt: $(TARGET_FILES) 
 
 clean:
-	rm -f $(TARGET_FILES) $(APP_TARGET) $(APPUP_TARGET)
+	rm -f $(BEHAVIOUR_TARGET_FILES) $(TARGET_FILES) $(APP_TARGET) $(APPUP_TARGET)
 	rm -f errs core *~
 
 docs:
 
 info:
 	@echo "MODULES = $(MODULES)"
+	@echo "BEHAVIOUR_MODULES = $(BEHAVIOUR_MODULES)"
 	@echo ""
 
 
@@ -88,12 +97,12 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 
 release_spec: opt
-	$(INSTALL_DIR)  $(RELSYSDIR)/ebin
-	$(INSTALL_DATA) $(TARGET_FILES) $(RELSYSDIR)/ebin
-	$(INSTALL_DIR)  $(RELSYSDIR)/src
-	$(INSTALL_DIR)  $(RELSYSDIR)/src/engine
-	$(INSTALL_DATA) $(ERL_FILES) $(INTERNAL_HRL_FILES) $(RELSYSDIR)/src/engine
-	$(INSTALL_DIR)  $(RELSYSDIR)/include
+	$(INSTALL_DIR)  "$(RELSYSDIR)/ebin"
+	$(INSTALL_DATA) $(BEHAVIOUR_TARGET_FILES) $(TARGET_FILES) "$(RELSYSDIR)/ebin"
+	$(INSTALL_DIR)  "$(RELSYSDIR)/src"
+	$(INSTALL_DIR)  "$(RELSYSDIR)/src/engine"
+	$(INSTALL_DATA) $(ERL_FILES) $(INTERNAL_HRL_FILES) "$(RELSYSDIR)/src/engine"
+	$(INSTALL_DIR)  "$(RELSYSDIR)/include"
 
 
 release_docs_spec:

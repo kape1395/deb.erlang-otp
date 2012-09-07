@@ -414,6 +414,10 @@ special(Port,File) ->
 		_ ->
 		    ok
 	    end;
+	".strangemodname" ->
+	    AllMods = contents(Port,"loaded_modules"),
+	    open_all_modules(Port,AllMods),
+	    ok;
 	%%! No longer needed - all atoms are shown on one page!!
 	%% ".250atoms" ->
 	%%     Html1 = contents(Port,"atoms"),
@@ -496,6 +500,26 @@ expand_binary_link(Html) ->
 	    expand_binary_link(T)
     end.
 
+open_all_modules(Port,Modules) ->
+    case get_first_module(Modules) of
+	{Module,Rest} ->
+	    ModuleDetails = contents(Port,"loaded_mod_details?mod=" ++ Module),
+            ModTitle = http_uri:decode(Module),
+	    ModTitle = title(ModuleDetails),
+	    open_all_modules(Port,Rest);
+	false ->
+	    ok
+    end.
+
+get_first_module([]) ->
+    false;
+get_first_module(Html) ->
+    case Html of
+	"<TD><A HREF=\"loaded_mod_details?mod=" ++ Rest ->
+	    {string:sub_word(Rest,1,$"),Rest};
+	 [_H|T] ->
+	    get_first_module(T)
+    end.
 
 %% next_link(Html) ->
 %%     case Html of
@@ -565,7 +589,7 @@ create_dumps(DataDir,[Rel|Rels],Acc) ->
     Fun = fun() -> do_create_dumps(DataDir,Rel) end,
     Pa = filename:dirname(code:which(?MODULE)),
     {SlAllocDumps,Dumps,DosDump} = 
-	?t:run_on_shielded_node(Fun, compat_rel(Rel) ++ "-pa " ++ Pa),
+	?t:run_on_shielded_node(Fun, compat_rel(Rel) ++ "-pa \"" ++ Pa ++ "\""),
     create_dumps(DataDir,Rels,SlAllocDumps ++ Dumps ++ Acc ++ DosDump);
 create_dumps(_DataDir,[],Acc) ->
     Acc.
@@ -590,7 +614,8 @@ do_create_dumps(DataDir,Rel) ->
     case Rel of
 	current ->
 	    CD3 = dump_with_args(DataDir,Rel,"instr","+Mim true"),
-	    {SlAllocDumps, [CD1,CD2,CD3], DosDump};
+	    CD4 = dump_with_strange_module_name(DataDir,Rel,"strangemodname"),
+	    {SlAllocDumps, [CD1,CD2,CD3,CD4], DosDump};
 	_ ->
 	    {SlAllocDumps, [CD1,CD2], DosDump}
     end.
@@ -600,7 +625,7 @@ do_create_dumps(DataDir,Rel) ->
 %% not connected node, and with monitors and links between nodes.
 full_dist_dump(DataDir,Rel) ->
     Opt = rel_opt(Rel),
-    Pz = "-pz " ++ filename:dirname(code:which(?MODULE)),
+    Pz = "-pz \"" ++ filename:dirname(code:which(?MODULE)) ++ "\"",
     PzOpt = [{args,Pz}],
     {ok,N1} = ?t:start_node(n1,peer,Opt ++ PzOpt),
     {ok,N2} = ?t:start_node(n2,peer,Opt ++ PzOpt),
@@ -648,7 +673,22 @@ dump_with_args(DataDir,Rel,DumpName,Args) ->
     ?t:stop_node(n1),
     CD.
 
+%% This dump is added to test OTP-10090 - regarding URL encoding of
+%% module names in the module detail link.
+dump_with_strange_module_name(DataDir,Rel,DumpName) ->
+    Opt = rel_opt(Rel),
+    {ok,N1} = ?t:start_node(n1,peer,Opt),
 
+    Mod = '<mod ule#with?strange%name>',
+    File = atom_to_list(Mod) ++ ".erl",
+    Forms = [{attribute,1,file,{File,1}},
+	     {attribute,1,module,Mod},
+	     {eof,4}],
+    {ok,Mod,Bin} = rpc:call(N1,compile,forms,[Forms,[binary]]),
+    {module,Mod} = rpc:call(N1,code,load_binary,[Mod,File,Bin]),
+    CD = dump(N1,DataDir,Rel,DumpName),
+    ?t:stop_node(n1),
+    CD.
 
 dump(Node,DataDir,Rel,DumpName) ->
     rpc:call(Node,erlang,halt,[DumpName]),

@@ -1186,6 +1186,7 @@ type(erlang, port_info, 2, Xs) ->
 		     ['links'] -> t_tuple([Item, t_list(t_pid())]);
 		     ['name'] -> t_tuple([Item, t_string()]);
 		     ['output'] -> t_tuple([Item, t_integer()]);
+		     ['os_pid'] -> t_tuple([Item, t_sup(t_non_neg_integer(),t_atom('undefined'))]);
 		     ['registered_name'] -> t_tuple([Item, t_atom()]);
 		     List when is_list(List) ->
 		       t_tuple([t_sup([t_atom(A) || A <- List]),
@@ -1268,7 +1269,6 @@ type(erlang, process_info, 2, Xs) ->
 			 ['links'] -> t_tuple([InfoItem, t_list(t_pid())]);
 			 ['memory'] ->
 			   t_tuple([InfoItem, t_non_neg_integer()]);
-			 ['message_binary'] -> t_tuple([InfoItem,  t_list()]);
 			 ['message_queue_len'] ->
 			   t_tuple([InfoItem, t_non_neg_integer()]);
 			 ['messages'] -> t_tuple([InfoItem, t_list()]);
@@ -1483,6 +1483,8 @@ type(erlang, statistics, 1, Xs) ->
 		 t_tuple([t_non_neg_integer(), t_integer(0)]);
 	       ['wall_clock'] ->
 		 t_tuple([t_non_neg_integer(), t_integer(0)]);
+	       ['scheduler_wall_time'] ->
+		 t_list(t_tuple([t_integer(), t_number(), t_number()]));
 	       List when is_list(List) ->
 		 T_statistics_1;
 	       unknown ->
@@ -1532,6 +1534,8 @@ type(erlang, system_flag, 2, Xs) ->
 		     t_sequential_tracer();
 		   ['trace_control_word'] ->
 		     t_integer();
+		   ['scheduler_wall_time'] ->
+		     t_boolean();
 		   List when is_list(List) ->
 		     T_system_flag_2;
 		   unknown ->
@@ -1593,14 +1597,10 @@ type(erlang, system_info, 1, Xs) ->
 		     t_tuple([t_atom('fullsweep_after'), t_non_neg_integer()]);
 		   ['garbage_collection'] ->
 		     t_list();
-		   ['global_heaps_size'] ->
-		     t_non_neg_integer();
 		   ['heap_sizes'] ->
 		     t_list(t_integer());
 		   ['heap_type'] ->
-		     t_sup([t_atom('private'),
-                            t_atom('shared'),
-                            t_atom('hybrid')]);
+		     t_atom('private');
 		   ['hipe_architecture'] ->
 		     t_atoms(['amd64', 'arm', 'powerpc', 'ppc64',
 			      'undefined', 'ultrasparc', 'x86']);
@@ -3789,7 +3789,7 @@ arg_types(erlang, port_info, 1) ->
 arg_types(erlang, port_info, 2) ->
   [t_sup(t_port(), t_atom()),
    t_atoms(['registered_name', 'id', 'connected',
-	    'links', 'name', 'input', 'output'])];
+	    'links', 'name', 'input', 'output', 'os_pid'])];
 arg_types(erlang, port_to_list, 1) ->
   [t_port()];
 arg_types(erlang, ports, 0) ->
@@ -3905,6 +3905,7 @@ arg_types(erlang, statistics, 1) ->
 	  t_atom('reductions'),
 	  t_atom('run_queue'),
 	  t_atom('runtime'),
+	  t_atom('scheduler_wall_time'),
 	  t_atom('wall_clock')])];
 arg_types(erlang, subtract, 2) ->
   arg_types(erlang, '--', 2);
@@ -3929,6 +3930,7 @@ arg_types(erlang, system_flag, 2) ->
 	  t_atom('trace_control_word'),
 	  %% 'internal_cpu_topology' is an undocumented internal feature.
 	  t_atom('internal_cpu_topology'),
+	  t_atom('scheduler_wall_time'),
 	  t_integer()]),
    t_sup([t_integer(),
 	  %% 'cpu_topology'
@@ -3944,6 +3946,9 @@ arg_types(erlang, system_flag, 2) ->
 	  %% The following two are for 'multi_scheduling'
 	  t_atom('block'),
 	  t_atom('unblock'),
+	  %% For 'scheduler_wall_time'
+	  t_atom('true'),
+	  t_atom('false'),
 	  %% The following is for 'internal_cpu_topology'
 	  t_internal_cpu_topology()])];
 arg_types(erlang, system_info, 1) ->
@@ -4271,7 +4276,7 @@ arg_types(hipe_bifs, ref_get, 1) ->
 arg_types(hipe_bifs, ref_set, 2) ->
   [t_hiperef(), t_immediate()];
 arg_types(hipe_bifs, remove_refs_from, 1) ->
-  [t_mfa()];
+  [t_sup([t_mfa(), t_atom('all')])];
 arg_types(hipe_bifs, set_funinfo_native_address, 3) ->
   arg_types(hipe_bifs, set_native_address, 3);
 arg_types(hipe_bifs, set_native_address, 3) ->
@@ -4742,7 +4747,6 @@ t_pinfo_item() ->
 	 t_atom('last_calls'),
 	 t_atom('links'),
 	 t_atom('memory'),
-	 t_atom('message_binary'),     % for hybrid heap only
 	 t_atom('message_queue_len'),
 	 t_atom('messages'),
 	 t_atom('monitored_by'),

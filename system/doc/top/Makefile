@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 1999-2011. All Rights Reserved.
+# Copyright Ericsson AB 1999-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -30,7 +30,7 @@ APPLICATION=otp-system-documentation
 # ----------------------------------------------------
 # Release directory specification
 # ----------------------------------------------------
-RELSYSDIR = $(RELEASE_PATH)/doc
+RELSYSDIR = "$(RELEASE_PATH)/doc"
 
 GIF_FILES = 
 
@@ -233,8 +233,8 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 
 release_docs_spec: docs
-	$(INSTALL_DIR)  $(RELEASE_PATH)
-	$(INSTALL_DATA) $(INFO_FILES) $(RELEASE_PATH)
+	$(INSTALL_DIR)  "$(RELEASE_PATH)"
+	$(INSTALL_DATA) $(INFO_FILES) "$(RELEASE_PATH)"
 	$(INSTALL_DIR)  $(RELSYSDIR)
 	$(INSTALL_DIR)  $(RELSYSDIR)/pdf
 	$(INSTALL_DATA)  \

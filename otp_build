@@ -2,7 +2,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 2002-2011. All Rights Reserved.
+# Copyright Ericsson AB 2002-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -51,7 +51,6 @@ usage ()
     echo "    release <target_dir> - creates a small release to <target_dir>"
     echo "    release [-a] <target_dir> - creates full release to <target_dir>"
     echo "    smp [-a] - build an Erlang system, smp flavor only"
-    echo "    hybrid [-a] - build an Erlang system, hybrid flavor only"
     echo "    tests <dir> - Build testsuites to <dir>"
     echo ""
     echo "These are for cleaning up an open source distribution"
@@ -84,7 +83,7 @@ usage ()
 	    ;;
 	git)
 	    echo ""
-	    echo "update_primary - build and commit a new primary bootstrap"
+	    echo "update_primary [--no-commit] - build and maybe commit a new primary bootstrap"
 	    ;;
     esac
 
@@ -93,7 +92,7 @@ usage ()
 	    ;;
 	git)
 	    echo ""
-	    echo "update_preloaded - build and commit the preloaded modules"
+	    echo "update_preloaded [--no-commit] - build and maybe commit the preloaded modules"
 	    ;;
     esac
 }
@@ -1094,33 +1093,61 @@ setup_make ()
     fi
     export MAKE
 }
-    
+
+get_do_commit ()
+{
+    if [ "x$1" = "x" ]; then
+	do_commit=true
+    elif [ "$1" = "--no-commit" ]; then
+	do_commit=false
+    else
+	echo "Unknown option '$1'" 1>&2
+	exit 1
+    fi
+}
+  
 do_primary_git ()
 {
+    get_do_commit $1
     setup_make
     if [ "x$OVERRIDE_TARGET" != "x" -a "x$OVERRIDE_TARGET" != "xwin32" ]; then
 	do_primary_cross
     else
 	$MAKE MAKE="$MAKE" BOOTSTRAP_ROOT=$BOOTSTRAP_ROOT TARGET=$TARGET primary_bootstrap || exit 1;
     fi
-    git add -A bootstrap/lib/kernel \
-        bootstrap/lib/stdlib \
-	bootstrap/lib/compiler \
-	bootstrap/bin
-    find bootstrap -name egen -o -name '*.script' -o \
-	-name '*.app' -o -name '*.appup' |
+    if [ $do_commit = true ]; then
+	git add -A bootstrap/lib/kernel \
+            bootstrap/lib/stdlib \
+	    bootstrap/lib/compiler \
+	    bootstrap/bin
+	find bootstrap -name egen -o -name '*.script' -o \
+	    -name '*.app' -o -name '*.appup' |
         xargs git reset HEAD
-    git commit --no-verify -m 'Update primary bootstrap'
+	git commit --no-verify -m 'Update primary bootstrap'
+	echo "Primary bootstrap updated and commited."
+    else
+	echo ""
+	echo "Primary bootstrap rebuilt. Use \"git add bootstrap/...\" to stage changed files."
+	echo ""
+    fi
 }
 
 do_update_prel_git ()
 {
+    get_do_commit $1
     setup_make
     (cd $ERL_TOP/erts/preloaded/src && $MAKE MAKE="$MAKE" BOOTSTRAP_ROOT=$BOOTSTRAP_ROOT TARGET=$TARGET clean)
     $MAKE MAKE="$MAKE" BOOTSTRAP_ROOT=$BOOTSTRAP_ROOT TARGET=$TARGET preloaded || exit 1
     (cd $ERL_TOP/erts/preloaded/src && $MAKE MAKE="$MAKE" BOOTSTRAP_ROOT=$BOOTSTRAP_ROOT TARGET=$TARGET copy)
-    git add -A $ERL_TOP/erts/preloaded/ebin/*.beam
-    git commit -m 'Update preloaded modules'
+    if [ $do_commit = true ]; then
+	git add -A $ERL_TOP/erts/preloaded/ebin/*.beam
+	git commit -m 'Update preloaded modules'
+	echo "Preloaded updated and commited."
+    else
+	echo ""
+	echo "Preloaded rebuilt. Use \"git add erts/preloaded/ebin/...\" to stage changed beam files."
+	echo ""
+    fi
 }
 
 do_boot ()
@@ -1281,8 +1308,8 @@ cd $ERL_TOP
 
 determine_version_controller
 
-# Unset ERL_FLAGS and ERL_<Release>_FLAGS to prevent, for instance,
-# a value of "-hybrid" to run the hybrid emulator during bootstrap.
+# Unset ERL_FLAGS and ERL_<Release>_FLAGS during bootstrap to
+# prevent potential problems
 sys_vsn=`awk '/SYSTEM_VSN = / {print $3}' < erts/vsn.mk`
 sys_erl_flags="ERL_${sys_vsn}_FLAGS"
 unset ERL_FLAGS
@@ -1311,7 +1338,9 @@ case $TARGET in
 	if [ X"$OVERRIDE_TARGET" = X"" -a X"$1" != X"env_win32" -a X"$1" != X"env_msys32" -a X"$1" != X"env_msys64"  ];then
 	    echo "Building for windows, you should do the " \
 		"following first:" >&2
-	    echo 'eval `./otp_build env_msys64`' >&2
+	    echo 'eval `./otp_build env_win32`' >&2
+	    echo 'or' >&2
+	    echo 'eval `./otp_build env_win32 x64`' >&2
 	    echo 'please note that there are backticks (``) in' \
 		'the command'
 	    exit 1
@@ -1390,7 +1419,7 @@ case "$1" in
 		do_lazy_configure_target_clean;;
 	opt)
 		do_boot;;
-	plain|smp|hybrid)
+	plain|smp)
 		if [ $minus_a_flag = false ]; then 
 		    TYPE=opt
 		fi;
@@ -1401,12 +1430,12 @@ case "$1" in
 		do_boot;;
 	update_primary)
 		case $version_controller in
-		    git) do_primary_git ;;
+		    git) do_primary_git "$2";;
 		    none) git_required ;;
 		esac ;;
 	update_preloaded)
 		case $version_controller in
-		    git) do_update_prel_git ;;
+		    git) do_update_prel_git "$2";;
 		    none) git_required ;;
 		esac ;;
         primary)

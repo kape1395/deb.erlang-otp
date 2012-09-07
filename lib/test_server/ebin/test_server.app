@@ -18,7 +18,7 @@
 
 {application, test_server,
  [{description, "The OTP Test Server application"},
-  {vsn, "3.5.1"},
+  {vsn, "3.5.2"},
   {modules, [
 	     erl2html2,
 	     test_server_ctrl,

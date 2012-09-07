@@ -1,5 +1,5 @@
 %% -*- erlang -*-
-{"0.15",
+{"0.16",
  [
   {<<"0\\.*">>,  [{restart_application, public_key}]}
  ],

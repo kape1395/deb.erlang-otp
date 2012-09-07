@@ -291,7 +291,6 @@ type	PORT_LOCK	STANDARD	SYSTEM		port_lock
 type	DRIVER_LOCK	STANDARD	SYSTEM		driver_lock
 type	XPORTS_LIST	SHORT_LIVED	SYSTEM		extra_port_list
 type	PROC_LCK_WTR	LONG_LIVED	SYSTEM		proc_lock_waiter
-type	PROC_LCK_QS	LONG_LIVED	SYSTEM		proc_lock_queues
 type	RUNQ_BLNS	LONG_LIVED	SYSTEM		run_queue_balancing
 type	THR_PRGR_IDATA	LONG_LIVED	SYSTEM		thr_prgr_internal_data
 type	THR_PRGR_DATA	LONG_LIVED	SYSTEM		thr_prgr_data
@@ -314,19 +313,6 @@ type	ETHR_LL		LONG_LIVED	SYSTEM		ethread_long_lived
 
 type	STACK		STANDARD	PROCESSES	stack
 type	ACTIVE_PROCS	STANDARD	PROCESSES	active_procs
-
-+endif
-
-+if hybrid
-
-type	ACTIVE_PROCS	STANDARD	PROCESSES	active_procs
-
-# Used for all memory involved in incremental gc of the message area
-# that is, young (x2) and old generation, forwarding pointers and blackmap
-type	MESSAGE_AREA	LONG_LIVED	PROCESSES	message_area
-
-# Used in MA_STACK (global.h) and INC_STORAGE (erl_nmgc.h)
-type	OBJECT_STACK	STANDARD	PROCESSES	object_stack
 
 +endif
 

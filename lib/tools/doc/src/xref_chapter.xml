@@ -4,7 +4,7 @@
 <chapter>
   <header>
     <copyright>
-      <year>2000</year><year>2009</year>
+      <year>2000</year><year>2012</year>
       <holder>Ericsson AB. All Rights Reserved.</holder>
     </copyright>
     <legalnotice>
@@ -301,7 +301,7 @@
       and <c>|||</c>) are the only operators that accept both
       representations. This means that in order to analyze indirect
       calls using restriction, the <c>closure</c> operator (which creates the
-      <c>digraph</c> representation of graphs) has to been
+      <c>digraph</c> representation of graphs) has to be
       applied explicitly.
       </p>
     <p>As an example of analyzing indirect calls, the following Erlang

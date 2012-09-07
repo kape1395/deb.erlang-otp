@@ -25,7 +25,8 @@
 %%%
 -module(ct_util).
 
--export([start/0,start/1,start/2,stop/1,update_last_run_index/0]).
+-export([start/0,start/1,start/2,start/3,
+	 stop/1,update_last_run_index/0]).
 
 -export([register_connection/4,unregister_connection/1,
 	 does_connection_exist/3,get_key_from_name/1]).
@@ -36,14 +37,15 @@
 	 save_suite_data_async/3, save_suite_data_async/2,
 	 read_suite_data/1, 
 	 delete_suite_data/0, delete_suite_data/1, match_delete_suite_data/1,
-	 delete_testdata/0, delete_testdata/1, set_testdata/1, get_testdata/1,
-	 set_testdata_async/1, update_testdata/2]).
+	 delete_testdata/0, delete_testdata/1,
+	 set_testdata/1, get_testdata/1, get_testdata/2,
+	 set_testdata_async/1, update_testdata/2, update_testdata/3]).
 
 -export([override_silence_all_connections/0, override_silence_connections/1, 
 	 get_overridden_silenced_connections/0, 
 	 delete_overridden_silenced_connections/0, 
-	 silence_all_connections/0, silence_connections/1, is_silenced/1, 
-	 reset_silent_connections/0]).
+	 silence_all_connections/0, silence_connections/1,
+	 is_silenced/1, is_silenced/2, reset_silent_connections/0]).
 
 -export([get_mode/0, create_table/3, read_opts/0]).
 
@@ -64,8 +66,12 @@
 -export([get_profile_data/0, get_profile_data/1,
 	 get_profile_data/2, open_url/3]).
 
+-include("ct.hrl").
 -include("ct_event.hrl").
 -include("ct_util.hrl").
+
+-define(default_verbosity, [{default,?MAX_VERBOSITY},
+			    {'$unspecified',?MAX_VERBOSITY}]).
 
 -record(suite_data, {key,name,value}).
 
@@ -85,18 +91,21 @@
 %%%
 %%% @see ct
 start() ->
-    start(normal,".").
+    start(normal, ".", ?default_verbosity).
 
 start(LogDir) when is_list(LogDir) ->
-    start(normal,LogDir);
+    start(normal, LogDir, ?default_verbosity);
 start(Mode) ->
-    start(Mode,".").
+    start(Mode, ".", ?default_verbosity).
 
-start(Mode,LogDir) ->
+start(LogDir, Verbosity) when is_list(LogDir) ->
+    start(normal, LogDir, Verbosity).
+
+start(Mode, LogDir, Verbosity) ->
     case whereis(ct_util_server) of
 	undefined ->
 	    S = self(),
-	    Pid = spawn_link(fun() -> do_start(S,Mode,LogDir) end),
+	    Pid = spawn_link(fun() -> do_start(S, Mode, LogDir, Verbosity) end),
 	    receive 
 		{Pid,started} -> Pid;
 		{Pid,Error} -> exit(Error);
@@ -113,7 +122,7 @@ start(Mode,LogDir) ->
 	    end
     end.
 
-do_start(Parent,Mode,LogDir) ->
+do_start(Parent, Mode, LogDir, Verbosity) ->
     process_flag(trap_exit,true),
     register(ct_util_server,self()),
     create_table(?conn_table,#conn.handle),
@@ -173,7 +182,7 @@ do_start(Parent,Mode,LogDir) ->
 	false ->
 	    ok
     end,
-    {StartTime,TestLogDir} = ct_logs:init(Mode),
+    {StartTime,TestLogDir} = ct_logs:init(Mode, Verbosity),
 
     ct_event:notify(#event{name=test_start,
 			   node=node(),
@@ -193,7 +202,7 @@ do_start(Parent,Mode,LogDir) ->
 	    self() ! {{stop,{self(),{user_error,CTHReason}}},
 		      {Parent,make_ref()}}
     end,
-    loop(Mode,[],StartDir).
+    loop(Mode, [{{verbosity,Cat},Lvl} || {Cat,Lvl} <- Verbosity], StartDir).
 
 create_table(TableName,KeyPos) ->
     create_table(TableName,set,KeyPos).
@@ -243,7 +252,10 @@ delete_testdata(Key) ->
     call({delete_testdata, Key}).
 
 update_testdata(Key, Fun) ->
-    call({update_testdata, Key, Fun}).
+    update_testdata(Key, Fun, []).
+
+update_testdata(Key, Fun, Opts) ->
+    call({update_testdata, Key, Fun, Opts}).
 
 set_testdata(TestData) ->
     call({set_testdata, TestData}).
@@ -253,6 +265,9 @@ set_testdata_async(TestData) ->
 
 get_testdata(Key) ->
     call({get_testdata, Key}).
+
+get_testdata(Key, Timeout) ->
+    call({get_testdata, Key}, Timeout).
 
 set_cwd(Dir) ->
     call({set_cwd,Dir}).
@@ -321,7 +336,7 @@ loop(Mode,TestData,StartDir) ->
 		    return(From,undefined)
 	    end,
 	    loop(From,TestData,StartDir);
-	{{update_testdata,Key,Fun},From} ->
+	{{update_testdata,Key,Fun,Opts},From} ->
 	    TestData1 =
 		case lists:keysearch(Key,1,TestData) of
 		    {value,{Key,Val}} ->
@@ -329,8 +344,15 @@ loop(Mode,TestData,StartDir) ->
 			return(From,NewVal),
 			[{Key,NewVal}|lists:keydelete(Key,1,TestData)];
 		    _ ->
-			return(From,undefined),
-			TestData
+			case lists:member(create,Opts) of
+			    true ->
+				InitVal = Fun(undefined),
+				return(From,InitVal),
+				[{Key,InitVal}|TestData];
+			    false ->
+				return(From,undefined),
+				TestData
+			end
 		end,
 	    loop(From,TestData1,StartDir);	    
 	{{set_cwd,Dir},From} ->
@@ -369,13 +391,24 @@ loop(Mode,TestData,StartDir) ->
 	{'EXIT',_Pid,normal} ->
 	    loop(Mode,TestData,StartDir);
 	{'EXIT',Pid,Reason} ->
-	    %% Let process crash in case of error, this shouldn't happen!
-	    io:format("\n\nct_util_server got EXIT from ~p: ~p\n\n",
-		      [Pid,Reason]),
-	    file:set_cwd(StartDir),
-	    exit(Reason)
+	    case ets:lookup(?conn_table,Pid) of
+		[#conn{address=A,callback=CB}] ->
+		    %% A connection crashed - remove the connection but don't die
+		    ct_logs:tc_log_async(ct_error_notify,
+					 "Connection process died: "
+					 "Pid: ~p, Address: ~p, Callback: ~p\n"
+					 "Reason: ~p\n\n",
+					 [Pid,A,CB,Reason]),
+		    catch CB:close(Pid),
+		    loop(Mode,TestData,StartDir);
+		_ ->
+		    %% Let process crash in case of error, this shouldn't happen!
+		    io:format("\n\nct_util_server got EXIT from ~p: ~p\n\n",
+			      [Pid,Reason]),
+		    file:set_cwd(StartDir),
+		    exit(Reason)
+	    end
     end.
-
 
 close_connections([#conn{handle=Handle,callback=CB}|Conns]) ->
     CB:close(Handle),
@@ -508,7 +541,7 @@ close_connections() ->
 %%%
 %%% @doc 
 override_silence_all_connections() ->
-    Protocols = [telnet,ftp,rpc,snmp],
+    Protocols = [telnet,ftp,rpc,snmp,ssh],
     override_silence_connections(Protocols),
     Protocols.
 
@@ -545,7 +578,10 @@ silence_connections(Conns) when is_list(Conns) ->
     set_testdata({silent_connections,Conns1}).
 
 is_silenced(Conn) ->
-    case get_testdata(silent_connections) of
+    is_silenced(Conn, infinity).
+
+is_silenced(Conn, Timeout) ->
+    case get_testdata(silent_connections, Timeout) of
 	Conns when is_list(Conns) ->
 	    case lists:keysearch(Conn,1,Conns) of
 		{value,{Conn,true}} ->
@@ -553,6 +589,8 @@ is_silenced(Conn) ->
 		_ ->
 		    false
 	    end;
+	Error = {error,_} ->
+	    Error;
 	_ ->
 	    false
     end.
@@ -827,19 +865,28 @@ get_profile_data(Profile, Key, StartDir) ->
 %%%-----------------------------------------------------------------
 %%% Internal functions
 call(Msg) ->
-    case whereis(ct_util_server) of
-	undefined ->
+    call(Msg, infinity).
+
+call(Msg, Timeout) ->
+    case {self(),whereis(ct_util_server)} of
+	{_,undefined} ->
 	    {error,ct_util_server_not_running};
-	Pid ->
+	{Pid,Pid} ->
+	    %% the caller is ct_util_server, which must
+	    %% be a mistake
+	    {error,bad_invocation};
+	{Self,Pid} ->
 	    MRef = erlang:monitor(process, Pid),
 	    Ref = make_ref(),
-	    ct_util_server ! {Msg,{self(),Ref}},
+	    ct_util_server ! {Msg,{Self,Ref}},
 	    receive
 		{Ref, Result} -> 
 		    erlang:demonitor(MRef, [flush]),
 		    Result;
 		{'DOWN',MRef,process,_,Reason}  -> 
 		    {error,{ct_util_server_down,Reason}}
+	    after
+		Timeout -> {error,timeout}
 	    end
     end.
 

@@ -294,6 +294,12 @@ module.beam: module.erl \
               describing what it is doing.</p>
           </item>
 
+	  <tag><c>{source,FileName}</c></tag>
+          <item>
+            <p>Sets the value of the source, as returned by
+              <c>module_info(compile)</c>.</p>
+          </item>
+
 	  <tag><c>{outdir,Dir}</c></tag>
           <item>
             <p>Sets a new directory for the object code. The current
@@ -310,7 +316,7 @@ module.beam: module.erl \
           <item>
             <p>Add <c>Dir</c> to the list of directories to be searched
               when including a file. When encountering an
-	      <c>-include</c> or <c>-include_dir</c> directive,
+	      <c>-include</c> or <c>-include_lib</c> directive,
 	      the compiler searches for header files in the following
 	      directories:</p>
             <list type="ordered">
@@ -333,7 +339,8 @@ module.beam: module.erl \
           <tag><c>{d,Macro,Value}</c></tag>
           <item>
             <p>Defines a macro <c>Macro</c> to have the value
-	      <c>Value</c>. The default is <c>true</c>.</p>
+            <c>Value</c>. <c>Macro</c> is of type atom, and <c>Value</c> can be any term.
+            The default <c>Value</c> is <c>true</c>.</p>
           </item>
 
 	  <tag><c>{parse_transform,Module}</c></tag>

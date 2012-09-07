@@ -136,13 +136,6 @@ ENABLE_ALLOC_TYPE_VARS += smp nofrag
 M4FLAGS += -DERTS_SMP=1
 else
 
-ifeq ($(FLAVOR),hybrid)
-FLAVOR_MARKER=.hybrid
-FLAVOR_FLAGS=-DHYBRID
-ENABLE_ALLOC_TYPE_VARS += hybrid
-else
-
-
 # If flavor isn't one of the above, it *is* plain flavor...
 override FLAVOR=plain
 FLAVOR_MARKER=
@@ -150,7 +143,6 @@ FLAVOR_FLAGS=
 ENABLE_ALLOC_TYPE_VARS += nofrag
 M4FLAGS +=
 
-endif
 endif
 
 TF_MARKER=$(TYPEMARKER)$(FLAVOR_MARKER)
@@ -444,18 +436,18 @@ release_spec:
 	@echo $(VOID_EMULATOR)' - omitted target release_spec (install)'
 else
 release_spec: all
-	$(INSTALL_DIR) $(RELSYSDIR)
-	$(INSTALL_DIR) $(RELSYSDIR)/src
-	$(INSTALL_DIR) $(RELSYSDIR)/include
-	$(INSTALL_DIR) $(RELSYSDIR)/man
-	$(INSTALL_DIR) $(RELSYSDIR)/doc
-	$(INSTALL_DIR) $(RELSYSDIR)/bin
-	$(INSTALL_DIR) $(RELEASE_PATH)/usr/include
-	$(INSTALL_DATA) $(RELEASE_INCLUDES) $(RELEASE_PATH)/usr/include
-	$(INSTALL_DATA) $(RELEASE_INCLUDES) $(RELSYSDIR)/include
-	$(INSTALL_PROGRAM) $(BINDIR)/$(EMULATOR_EXECUTABLE) $(RELSYSDIR)/bin
+	$(INSTALL_DIR) "$(RELSYSDIR)"
+	$(INSTALL_DIR) "$(RELSYSDIR)/src"
+	$(INSTALL_DIR) "$(RELSYSDIR)/include"
+	$(INSTALL_DIR) "$(RELSYSDIR)/man"
+	$(INSTALL_DIR) "$(RELSYSDIR)/doc"
+	$(INSTALL_DIR) "$(RELSYSDIR)/bin"
+	$(INSTALL_DIR) "$(RELEASE_PATH)/usr/include"
+	$(INSTALL_DATA) $(RELEASE_INCLUDES) "$(RELEASE_PATH)/usr/include"
+	$(INSTALL_DATA) $(RELEASE_INCLUDES) "$(RELSYSDIR)/include"
+	$(INSTALL_PROGRAM) $(BINDIR)/$(EMULATOR_EXECUTABLE) "$(RELSYSDIR)/bin"
 ifeq ($(ERLANG_OSTYPE), unix)
-	$(INSTALL_PROGRAM) $(BINDIR)/$(CS_EXECUTABLE) $(RELSYSDIR)/bin
+	$(INSTALL_PROGRAM) $(BINDIR)/$(CS_EXECUTABLE) "$(RELSYSDIR)/bin"
 endif
 endif
 
@@ -748,7 +740,7 @@ RUN_OBJS = \
 	$(OBJDIR)/register.o		$(OBJDIR)/break.o \
 	$(OBJDIR)/erl_async.o		$(OBJDIR)/erl_lock_check.o \
 	$(OBJDIR)/erl_gc.o 		$(OBJDIR)/erl_lock_count.o \
-	$(OBJDIR)/erl_nmgc.o		$(OBJDIR)/erl_posix_str.o \
+	$(OBJDIR)/erl_posix_str.o \
 	$(OBJDIR)/erl_bits.o 		$(OBJDIR)/erl_math.o \
 	$(OBJDIR)/erl_fun.o             $(OBJDIR)/erl_bif_port.o \
 	$(OBJDIR)/erl_term.o 		$(OBJDIR)/erl_node_tables.o \
@@ -931,6 +923,11 @@ $(TTF_DIR)/hipe_arm_bifs.S:	hipe/hipe_arm_bifs.m4 hipe/hipe_arm_asm.m4 \
 	hipe/hipe_bif_list.m4 $(TARGET)/erl_bif_list.h hipe/hipe_gbif_list.h
 $(OBJDIR)/hipe_arm_bifs.o:	$(TTF_DIR)/hipe_arm_bifs.S \
 	$(TTF_DIR)/hipe_literals.h
+
+# Use -fomit-frame-pointer to work around gcc (v4.5.2) bug causing
+# "error: r7 cannot be used in asm here" for DEBUG build.
+$(OBJDIR)/hipe_arm.o:           hipe/hipe_arm.c
+	$(CC) $(subst O2,O3, $(CFLAGS)) -fomit-frame-pointer $(INCLUDES) -c $< -o $@
 
 # end of HiPE section
 ########################################

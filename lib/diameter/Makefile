@@ -30,7 +30,7 @@ endif
 include vsn.mk
 VSN=$(DIAMETER_VSN)
 
-DIAMETER_TOP = /net/isildur/ldisk/daily_build/r15b01_prebuild_opu_o.2012-04-01_20/otp_src_R15B01/lib/diameter
+DIAMETER_TOP = /net/isildur/ldisk/daily_build/r15b02_prebuild_opu_o.2012-09-03_11/otp_src_R15B02/lib/diameter
 
 
 # ----------------------------------------------------

@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 1999-2011. All Rights Reserved.
+# Copyright Ericsson AB 1999-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -85,7 +85,7 @@ DYNAMIC_CRYPTO_LIB=@SSL_DYNAMIC_ONLY@
 
 ifeq ($(DYNAMIC_CRYPTO_LIB),yes)
 SSL_DED_LD_RUNTIME_LIBRARY_PATH = @SSL_DED_LD_RUNTIME_LIBRARY_PATH@
-CRYPTO_LINK_LIB=$(SSL_DED_LD_RUNTIME_LIBRARY_PATH) -L$(SSL_LIBDIR) -l$(SSL_CRYPTO_LIBNAME) -l$(SSL_SSL_LIBNAME)
+CRYPTO_LINK_LIB=$(SSL_DED_LD_RUNTIME_LIBRARY_PATH) -L$(SSL_LIBDIR) -l$(SSL_CRYPTO_LIBNAME)
 else
 SSL_DED_LD_RUNTIME_LIBRARY_PATH=
 CRYPTO_LINK_LIB=$(SSL_LIBDIR)/lib$(SSL_CRYPTO_LIBNAME).a 
@@ -133,11 +133,11 @@ docs:
 include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt
-	$(INSTALL_DIR) $(RELSYSDIR)/priv/obj
-	$(INSTALL_DIR) $(RELSYSDIR)/priv/lib
-	$(INSTALL_DATA) $(NIF_MAKEFILE) $(RELSYSDIR)/priv/obj
-	$(INSTALL_PROGRAM) $(OBJS) $(RELSYSDIR)/priv/obj
-	$(INSTALL_PROGRAM) $(NIF_LIB) $(RELSYSDIR)/priv/lib
+	$(INSTALL_DIR) "$(RELSYSDIR)/priv/obj"
+	$(INSTALL_DIR) "$(RELSYSDIR)/priv/lib"
+	$(INSTALL_DATA) $(NIF_MAKEFILE) "$(RELSYSDIR)/priv/obj"
+	$(INSTALL_PROGRAM) $(OBJS) "$(RELSYSDIR)/priv/obj"
+	$(INSTALL_PROGRAM) $(NIF_LIB) "$(RELSYSDIR)/priv/lib"
 
 release_docs_spec:
 

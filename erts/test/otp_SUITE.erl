@@ -88,8 +88,9 @@ undefined_functions(Config) when is_list(Config) ->
     ?line Undef1 = hipe_filter(Undef0),
     ?line Undef2 = ssl_crypto_filter(Undef1),
     ?line Undef3 = edoc_filter(Undef2),
-    ?line Undef = eunit_filter(Undef3),
-    ?line Undef = megaco_filter(Undef),
+    Undef4 = eunit_filter(Undef3),
+    Undef5 = dialyzer_filter(Undef4),
+    Undef = wx_filter(Undef5),
 
     case Undef of
 	[] -> ok;
@@ -97,9 +98,11 @@ undefined_functions(Config) when is_list(Config) ->
 	    Fd = open_log(Config, "undefined_functions"),
 	    foreach(fun ({MFA1,MFA2}) ->
 			    io:format("~s calls undefined ~s",
-				      [format_mfa(MFA1),format_mfa(MFA2)]),
+				      [format_mfa(Server, MFA1),
+				       format_mfa(MFA2)]),
 			    io:format(Fd, "~s ~s\n",
-				      [format_mfa(MFA1),format_mfa(MFA2)])
+				      [format_mfa(Server, MFA1),
+				       format_mfa(MFA2)])
 		    end, Undef),
 	    close_log(Fd),
 	    ?line ?t:fail({length(Undef),undefined_functions_in_otp})
@@ -171,34 +174,34 @@ eunit_filter(Undef) ->
 	      (_) -> true
 	   end, Undef).
 
-megaco_filter(Undef) ->
-    %% Intentional calls to undefined functions.
-    filter(fun({{megaco_compact_text_encoder,encode_action_reply,3},
-		{megaco_compact_text_encoder_v3,encode_action_reply,2}}) -> false;
-	      ({{megaco_compact_text_encoder,encode_action_request,3},
-		{megaco_compact_text_encoder_v3,encode_action_request,2}}) -> false;
-	      ({{megaco_compact_text_encoder,encode_action_requests,3},
-		{megaco_compact_text_encoder_v3,encode_action_requests,2}}) -> false;
-	      ({{megaco_compact_text_encoder,encode_command_request,3},
-		{megaco_compact_text_encoder_v3,encode_command_request,2}}) -> false;
-	      ({{megaco_compact_text_encoder,encode_message,3},
-		{megaco_compact_text_encoder_v3,encode_message,2}}) -> false;
-	      ({{megaco_compact_text_encoder,encode_transaction,3},
-		{megaco_compact_text_encoder_v3,encode_transaction,2}}) -> false;
-	      ({{megaco_pretty_text_encoder,encode_action_reply,3},
-		{megaco_pretty_text_encoder_v3,encode_action_reply,2}}) -> false;
-	      ({{megaco_pretty_text_encoder,encode_action_request,3},
-		{megaco_pretty_text_encoder_v3,encode_action_request,2}}) -> false;
-	      ({{megaco_pretty_text_encoder,encode_action_requests,3},
-		{megaco_pretty_text_encoder_v3,encode_action_requests,2}}) -> false;
-	      ({{megaco_pretty_text_encoder,encode_command_request,3},
-		{megaco_pretty_text_encoder_v3,encode_command_request,2}}) -> false;
-	      ({{megaco_pretty_text_encoder,encode_message,3},
-		{megaco_pretty_text_encoder_v3,encode_message,2}}) -> false;
-	      ({{megaco_pretty_text_encoder,encode_transaction,3},
-		{megaco_pretty_text_encoder_v3,encode_transaction,2}}) -> false;
-	      (_) -> true
-	   end, Undef).
+dialyzer_filter(Undef) ->
+    case code:lib_dir(dialyzer) of
+	{error,bad_name} ->
+	    filter(fun({_,{dialyzer_callgraph,_,_}}) -> false;
+		      ({_,{dialyzer_codeserver,_,_}}) -> false;
+		      ({_,{dialyzer_contracts,_,_}}) -> false;
+		      ({_,{dialyzer_cl_parse,_,_}}) -> false;
+		      ({_,{dialyzer_timing,_,_}}) -> false;
+		      ({_,{dialyzer_plt,_,_}}) -> false;
+		      ({_,{dialyzer_succ_typings,_,_}}) -> false;
+		      ({_,{dialyzer_utils,_,_}}) -> false;
+		      (_) -> true
+		   end, Undef);
+	_ -> Undef
+    end.
+
+wx_filter(Undef) ->
+    case code:lib_dir(wx) of
+	{error,bad_name} ->
+	    filter(fun({_,{MaybeWxModule,_,_}}) ->
+			   case atom_to_list(MaybeWxModule) of
+			       "wx"++_ -> false;
+			       _ -> true
+			   end
+		   end, Undef);
+	_ -> Undef
+    end.
+				   
 
 deprecated_not_in_obsolete(Config) when is_list(Config) ->
     ?line Server = ?config(xref_server, Config),
@@ -215,9 +218,9 @@ deprecated_not_in_obsolete(Config) when is_list(Config) ->
 	_ ->
 	    io:put_chars("The following functions have -deprecated() attributes,\n"
 			 "but are not listed in otp_internal:obsolete/3.\n"),
-	    ?line print_mfas(group_leader(), L),
+	    print_mfas(group_leader(), Server, L),
 	    Fd = open_log(Config, "deprecated_not_obsolete"),
-	    print_mfas(Fd, L),
+	    print_mfas(Fd, Server, L),
 	    close_log(Fd),
 	    ?line ?t:fail({length(L),deprecated_but_not_obsolete})
     end.
@@ -239,9 +242,9 @@ obsolete_but_not_deprecated(Config) when is_list(Config) ->
 	    io:put_chars("The following functions are listed "
 			 "in otp_internal:obsolete/3,\n"
 			 "but don't have -deprecated() attributes.\n"),
-	    ?line print_mfas(group_leader(), L),
+	    print_mfas(group_leader(), Server, L),
 	    Fd = open_log(Config, "obsolete_not_deprecated"),
-	    print_mfas(Fd, L),
+	    print_mfas(Fd, Server, L),
 	    close_log(Fd),
 	    ?line ?t:fail({length(L),obsolete_but_not_deprecated})
     end.
@@ -310,14 +313,21 @@ strong_components(Config) when is_list(Config) ->
 %%% Common help functions.
 %%%
     
-
-print_mfas(Fd, [MFA|T]) ->
-    io:format(Fd, "~s\n", [format_mfa(MFA)]),
-    print_mfas(Fd, T);
-print_mfas(_, []) -> ok.
+print_mfas(Fd, Server, MFAs) ->
+    [io:format(Fd, "~s\n", [format_mfa(Server, MFA)]) || MFA <- MFAs],
+    ok.
 
 format_mfa({M,F,A}) ->
     lists:flatten(io_lib:format("~s:~s/~p", [M,F,A])).
+
+format_mfa(Server, MFA) ->
+    MFAString = format_mfa(MFA),
+    AQ = "(App)" ++ MFAString,
+    AppPrefix = case xref:q(Server, AQ) of
+		    {ok,[App]} -> "[" ++ atom_to_list(App) ++ "]";
+		    _ -> ""
+		end,
+    AppPrefix ++ MFAString.
 
 open_log(Config, Name) ->
     PrivDir = ?config(priv_dir, Config),

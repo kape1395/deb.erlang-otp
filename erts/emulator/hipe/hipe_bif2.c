@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2001-2011. All Rights Reserved.
+ * Copyright Ericsson AB 2001-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -149,22 +149,6 @@ BIF_RETTYPE hipe_bifs_modeswitch_debug_off_0(BIF_ALIST_0)
 {
     hipe_modeswitch_debug = 0;
     BIF_RET(am_true);
-}
-
-/* BIFs for handling the message area */
-
-BIF_RETTYPE hipe_bifs_show_message_area_0(BIF_ALIST_0)
-{
-#ifdef HYBRID
-#ifdef DEBUG
-    print_message_area();
-#else
-    printf("Only available in debug compiled emulator\r\n");
-#endif
-    BIF_RET(am_true);
-#else
-    BIF_RET(am_false);
-#endif
 }
 
 #if defined(ERTS_ENABLE_LOCK_CHECK) && defined(ERTS_SMP)

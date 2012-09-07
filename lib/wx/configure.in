@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script. -*-m4-*-
 
 dnl %CopyrightBegin%
 dnl
-dnl Copyright Ericsson AB 2008-2011. All Rights Reserved.
+dnl Copyright Ericsson AB 2008-2012. All Rights Reserved.
 dnl
 dnl The contents of this file are subject to the Erlang Public License,
 dnl Version 1.1, (the "License"); you may not use this file except in
@@ -571,7 +571,7 @@ if test X"$WX_HAVE_STATIC_LIBS" = X"true" ; then
    LIBS=$WX_LIBS_STATIC   
 fi
 
-AC_LINK_IFELSE([
+AC_LINK_IFELSE([AC_LANG_SOURCE([
 		#ifdef WIN32
 		# include <windows.h>
 	        # include <gl/gl.h>
@@ -583,6 +583,7 @@ AC_LINK_IFELSE([
                 #include "wx/wx.h"
 		#include "wx/stc/stc.h"
 		#include "wx/glcanvas.h"
+		])
 
 		class MyApp : public wxApp
 		{

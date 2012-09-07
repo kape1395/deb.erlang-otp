@@ -1,7 +1,7 @@
 # 
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 2010-2011. All Rights Reserved.
+# Copyright Ericsson AB 2010-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -67,7 +67,12 @@ ERL_COMPILE_FLAGS += +warn_export_vars \
 # Targets
 # ----------------------------------------------------
 
+# Require success ...
 all: opt
+
+# ... or not.
+any: opt
+	$(MAKE) -i $(SUITES)
 
 run: $(SUITES)
 
@@ -113,7 +118,7 @@ help:
 	@echo "        Echo some relevant variables."
 	@echo ========================================
 
-.PHONY: all run clean debug docs help info opt realclean
+.PHONY: all any run clean debug docs help info opt realclean
 
 # ----------------------------------------------------
 # Special Targets
@@ -141,7 +146,7 @@ log:
 # ---------------------------------------------------- 
 
 /%: % force
-	sed -f release.sed $< > $(RELSYSDIR)$@
+	sed -f release.sed $< > "$(RELSYSDIR)$@"
 
 ifeq ($(ERL_TOP),)
 include $(DIAMETER_TOP)/make/release_targets.mk
@@ -152,17 +157,17 @@ endif
 release_spec release_docs_spec:
 
 release_tests_spec:
-	$(INSTALL_DIR)  $(RELSYSDIR)
+	$(INSTALL_DIR)  "$(RELSYSDIR)"
 	$(INSTALL_DATA) $(TEST_SPEC_FILE) \
 	                $(COVER_SPEC_FILE) \
 	                $(HRL_FILES) \
-	                $(RELSYSDIR)
+	                "$(RELSYSDIR)"
 	$(MAKE) $(DATA_DIRS:%/=release_data_%)
 	$(MAKE) $(ERL_FILES:%=/%)
 
 $(DATA_DIRS:%/=release_data_%): release_data_%:
-	$(INSTALL_DIR) $(RELSYSDIR)/$*
-	$(INSTALL_DATA) $(filter $*/%, $(DATA)) $(RELSYSDIR)/$*
+	$(INSTALL_DIR) "$(RELSYSDIR)/$*"
+	$(INSTALL_DATA) $(filter $*/%, $(DATA)) "$(RELSYSDIR)/$*"
 
 force:
 

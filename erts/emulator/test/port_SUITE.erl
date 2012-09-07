@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1997-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1997-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -1244,8 +1244,8 @@ otp_3906_forker(N, Parent, Ref, Sup, Prog) ->
 otp_4389(suite) -> [];
 otp_4389(doc) -> [];
 otp_4389(Config)  when is_list(Config) ->
-    case {os:type(),erlang:system_info(heap_type)} of
-	{{unix, _},private} ->
+    case os:type() of
+	{unix, _} ->
 	    ?line Dog = test_server:timetrap(test_server:seconds(240)),
 	    ?line TCR = self(),
 	    case get_true_cmd() of
@@ -1293,7 +1293,7 @@ otp_4389(Config)  when is_list(Config) ->
 		    ?line {skipped, "\"true\" command not found"}
 	    end;
 	_ ->
-	    {skip,"Only run on Unix and private heaps"}
+	    {skip,"Only run on Unix"}
     end.
 
 get_true_cmd() ->

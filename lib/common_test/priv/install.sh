@@ -1,8 +1,8 @@
 #!/bin/sh
 
 CT_ROOT=$1
-CT_VSN=1.6.1
-TS_VSN=3.5.1
+CT_VSN=1.6.2
+TS_VSN=3.5.2
 
 if [ -z "$CT_ROOT" ]
 then

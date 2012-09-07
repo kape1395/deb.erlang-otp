@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2009-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2009-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -621,7 +621,9 @@ setup_and_execute(TCName, TestSpec, Config) ->
     ok = ct_test_support:run(Opts, Config),
     TestSpec1 = [{logdir,proplists:get_value(logdir,Opts)},
 		 {label,proplists:get_value(label,TestTerms)} | TestSpec],
-    ok = ct_test_support:run(ct, run_testspec, [TestSpec1], Config),
+    {_Ok,_Failed,{_USkipped,_ASkipped}} = 
+	ct_test_support:run(ct, run_testspec, [TestSpec1], Config),
+
     Events = ct_test_support:get_events(ERPid, Config),
 
     ct_test_support:log_events(TCName,

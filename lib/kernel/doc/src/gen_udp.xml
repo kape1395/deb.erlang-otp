@@ -4,7 +4,7 @@
 <erlref>
   <header>
     <copyright>
-      <year>1997</year><year>2011</year>
+      <year>1997</year><year>2012</year>
       <holder>Ericsson AB. All Rights Reserved.</holder>
     </copyright>
     <legalnotice>
@@ -72,6 +72,14 @@
             <p>If the host has several network interfaces, this option
               specifies which one to use.</p>
           </item>
+
+		  <tag><c>{ifaddr, ip_address()}</c></tag>
+          <item>
+			  <p>Same as <c>{ip, ip_address()}</c>. If the host has several network interfaces, this option
+              specifies which one to use.</p>
+		  </item>
+
+
           <tag><c>{fd, integer() >= 0}</c></tag>
           <item>
             <p>If a socket has somehow been opened without using
@@ -86,6 +94,51 @@
           <item>
             <p>Set up the socket for IPv4.</p>
           </item>
+
+		  <tag><c>{udp_module, module()}</c></tag>
+		  <item> <p>
+				  Override which callback module is used. Defaults to
+				  <c>inet_udp</c> for IPv4 and <c>inet6_udp</c> for IPv6.
+			  </p>
+		  </item>
+
+          <tag><c>{multicast_if, Address}</c></tag>
+          <item>
+			  <p>Set the local device for a multicast socket.</p>
+          </item>
+ 
+          <tag><c>{multicast_loop, true | false}</c></tag>
+          <item>
+			  <p>
+				  When <c>true</c> sent multicast packets will be looped back to the local
+				  sockets.
+			  </p>
+          </item>
+
+          <tag><c>{multicast_ttl, Integer}</c></tag>
+          <item>
+			  <p>
+				  The <c>multicast_ttl</c> option changes the time-to-live (TTL) for
+				  outgoing multicast datagrams in order to control the scope of the 
+				  multicasts.
+			  </p>
+			  <p>
+				  Datagrams with a TTL of 1 are not forwarded beyond the local
+				  network.
+				  <br />Default: 1
+			  </p>
+          </item>
+
+		  <tag><c>{add_membership, {MultiAddress, InterfaceAddress}}</c></tag>
+          <item>
+			  <p>Join a multicast group. </p>
+          </item>
+
+		  <tag><c>{drop_membership, {MultiAddress, InterfaceAddress}}</c></tag>
+          <item>
+			  <p>Leave multicast group.</p>
+          </item>
+
           <tag><c>Opt</c></tag>
           <item>
             <p>See
@@ -136,7 +189,9 @@
       <desc>
         <p>Assigns a new controlling process <c><anno>Pid</anno></c> to
           <c><anno>Socket</anno></c>. The controlling process is the process which
-          receives messages from the socket.</p>
+          receives messages from the socket. If called by any other
+          process than the current controlling process,
+          <c>{error, not_owner}</c> is returned.</p>
       </desc>
     </func>
     <func>

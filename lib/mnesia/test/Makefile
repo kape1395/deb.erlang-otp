@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 1996-2011. All Rights Reserved.
+# Copyright Ericsson AB 1996-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -52,24 +52,29 @@ MODULES= \
 	mnesia_cost \
 	mnesia_dbn_meters 
 
-MnesiaExamplesDir := ../examples
+DocExamplesDir := ../doc/src/
 
-ExampleModules =  \
+DocExampleModules =  \
 	company \
 	company_o \
-	bup \
-	mnesia_meter \
-	mnesia_tpcb       
-ExamplesHrl = \
+	bup
+
+DocExamplesHrl = \
 	company.hrl \
 	company_o.hrl
 
-ERL_FILES= $(MODULES:%=%.erl) $(ExampleModules:%=$(MnesiaExamplesDir)/%.erl)
+ExamplesDir := ../examples/
 
-HRL_FILES= mnesia_test_lib.hrl $(ExamplesHrl:%=$(MnesiaExamplesDir)/%)
+ExampleModules = \
+	mnesia_meter \
+	mnesia_tpcb
+
+ERL_FILES= $(MODULES:%=%.erl) $(DocExampleModules:%=$(DocExamplesDir)/%.erl) $(ExampleModules:%=$(ExamplesDir)/%.erl)
+
+HRL_FILES= mnesia_test_lib.hrl $(DocExamplesHrl:%=$(DocExamplesDir)/%)
 
 TARGET_FILES= \
-	$(MODULES:%=$(EBIN)/%.$(EMULATOR)) $(ExampleModules:%=$(EBIN)/%.$(EMULATOR)) 
+	$(MODULES:%=$(EBIN)/%.$(EMULATOR)) $(DocExampleModules:%=$(EBIN)/%.$(EMULATOR)) $(ExampleModules:%=$(EBIN)/%.$(EMULATOR))
 
 INSTALL_PROGS= $(TARGET_FILES)
 
@@ -91,7 +96,10 @@ EBIN = .
 
 tests debug opt: $(TARGET_FILES)
 
-$(EBIN)/%.beam: $(MnesiaExamplesDir)/%.erl
+$(EBIN)/%.beam: $(DocExamplesDir)/%.erl
+	$(ERLC) -bbeam $(ERL_COMPILE_FLAGS) -o$(EBIN) $<
+
+$(EBIN)/%.beam: $(ExamplesDir)/%.erl
 	$(ERLC) -bbeam $(ERL_COMPILE_FLAGS) -o$(EBIN) $<
 
 clean:
@@ -108,11 +116,11 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 release_spec: opt
 
 release_tests_spec: opt
-	$(INSTALL_DIR) $(RELSYSDIR)
-	$(INSTALL_DATA) mnesia.spec mnesia.cover $(ERL_FILES) $(HRL_FILES) $(RELSYSDIR)
-	$(INSTALL_SCRIPT) mt $(INSTALL_PROGS) $(RELSYSDIR)
-#	chmod -R u+w $(RELSYSDIR)
-#	@tar cf - *_SUITE_data | (cd $(RELSYSDIR); tar xf -)
+	$(INSTALL_DIR) "$(RELSYSDIR)"
+	$(INSTALL_DATA) mnesia.spec mnesia.cover $(ERL_FILES) $(HRL_FILES) "$(RELSYSDIR)"
+	$(INSTALL_SCRIPT) mt $(INSTALL_PROGS) "$(RELSYSDIR)"
+#	chmod -R u+w "$(RELSYSDIR)"
+#	@tar cf - *_SUITE_data | (cd "$(RELSYSDIR)"; tar xf -)
 
 release_docs_spec:
 

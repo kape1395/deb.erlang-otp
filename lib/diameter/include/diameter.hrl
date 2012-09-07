@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2010-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2010-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -139,7 +139,6 @@
          init_state, %% option 'state', initial callback state
          id,         %% 32-bit unsigned application identifier = Dict:id()
          mutable = false, %% boolean(), do traffic callbacks modify state?
-         answer_errors = report}). %% | callback | discard
-                                   %% how to handle containing errors?
+         options = [{answer_errors, report}]}).  %% | callback | discard
 
 -endif. %% -ifdef(diameter_hrl).

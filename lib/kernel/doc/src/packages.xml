@@ -4,7 +4,7 @@
 <erlref>
   <header>
     <copyright>
-      <year>2004</year><year>2009</year>
+      <year>2004</year><year>2012</year>
       <holder>Ericsson AB. All Rights Reserved.</holder>
     </copyright>
     <legalnotice>
@@ -204,11 +204,5 @@ ok
       Explicitly
       declaring each use of a module makes for safe code.</p>
   </description>
-  <funcs>
-    <func>
-      <name>no functions exported</name>
-      <fsummary>x</fsummary>
-    </func>
-  </funcs>
 </erlref>
 
