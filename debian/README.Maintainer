@@ -34,7 +34,7 @@ dch -v 15B02-1 "Packaging Erlang/OTP R15B02."
 git add debian/changelog
 git commit -m "changelog updated."
 git-buildpackage --git-no-pristine-tar --git-builder="debuild -i\.git -I.git -b" # For each arch.
-git-buildpackage --git-no-pristine-tar --git-builder="debuild -i\.git -I.git -S" # Once for release.
+git-buildpackage --git-no-pristine-tar --git-builder="debuild -i\.git -I.git -S -sa" # Once for release.
 dput karolis-debian ../erlang-otp_15B02-1_i386.changes # For each build bin and src.
 git clean -dxf
 git reset --hard
