@@ -1,4 +1,10 @@
-erlang-otp (15B02-1) precise; urgency=low
+erlang-otp (15B02-2) squeeze; urgency=low
+
+  * Fixed wrong distribution.
+
+ -- Karolis Petrauskas <k.petrauskas@gmail.com>  Sat, 08 Sep 2012 15:39:59 +0300
+
+erlang-otp (15B02-1) squeeze; urgency=low
 
   * Packaging Erlang/OTP R15B02.
   * Dependency versions made explicit.
