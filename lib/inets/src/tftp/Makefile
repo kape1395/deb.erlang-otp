@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 2005-2010. All Rights Reserved.
+# Copyright Ericsson AB 2005-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -39,8 +39,10 @@ RELSYSDIR = $(RELEASE_PATH)/lib/$(APPLICATION)-$(VSN)
 # ----------------------------------------------------
 # Target Specs
 # ----------------------------------------------------
+BEHAVIOUR_MODULES= \
+	tftp
+
 MODULES = \
-	tftp \
 	tftp_binary \
 	tftp_engine \
 	tftp_file \
@@ -50,10 +52,13 @@ MODULES = \
 
 HRL_FILES = tftp.hrl
 
-ERL_FILES = $(MODULES:%=%.erl)
+ERL_FILES= \
+	$(MODULES:%=%.erl) \
+	$(BEHAVIOUR_MODULES:%=%.erl)
 
 TARGET_FILES= $(MODULES:%=$(EBIN)/%.$(EMULATOR))
 
+BEHAVIOUR_TARGET_FILES= $(BEHAVIOUR_MODULES:%=$(EBIN)/%.$(EMULATOR))
 
 # ----------------------------------------------------
 # FLAGS
@@ -72,10 +77,12 @@ ERL_COMPILE_FLAGS += \
 # Targets
 # ----------------------------------------------------
 
+$(TARGET_FILES): $(BEHAVIOUR_TARGET_FILES)
+
 debug opt: $(TARGET_FILES)
 
 clean:
-	rm -f $(TARGET_FILES)
+	rm -f $(TARGET_FILES) $(BEHAVIOUR_TARGET_FILES)
 	rm -f core
 
 docs:
@@ -86,11 +93,11 @@ docs:
 include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt
-	$(INSTALL_DIR)  $(RELSYSDIR)/src
-	$(INSTALL_DIR)  $(RELSYSDIR)/src/tftp
-	$(INSTALL_DATA) $(HRL_FILES) $(ERL_FILES) $(RELSYSDIR)/src/tftp
-	$(INSTALL_DIR)  $(RELSYSDIR)/ebin
-	$(INSTALL_DATA) $(TARGET_FILES) $(RELSYSDIR)/ebin
+	$(INSTALL_DIR)  "$(RELSYSDIR)/src"
+	$(INSTALL_DIR)  "$(RELSYSDIR)/src/tftp"
+	$(INSTALL_DATA) $(HRL_FILES) $(ERL_FILES) "$(RELSYSDIR)/src/tftp"
+	$(INSTALL_DIR)  "$(RELSYSDIR)/ebin"
+	$(INSTALL_DATA) $(TARGET_FILES) $(BEHAVIOUR_TARGET_FILES) "$(RELSYSDIR)/ebin"
 
 release_docs_spec:
 

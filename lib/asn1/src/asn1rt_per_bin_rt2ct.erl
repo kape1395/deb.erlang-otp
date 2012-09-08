@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 2002-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2002-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -18,7 +18,6 @@
 %%
 %%
 -module(asn1rt_per_bin_rt2ct).
-
 %% encoding / decoding of PER aligned
 
 -include("asn1_records.hrl").
@@ -605,19 +604,13 @@ encode_constrained_number({Lb,Ub},Val) when Val >= Lb, Ub >= Val ->
 	Range  =< 65536 ->
 %	    Size = {octets,<<Val2:16>>};
 	    [20,2,<<Val2:16>>];
-	Range =< 16#1000000  ->
-	    Octs = eint_positive(Val2),
-%	    [{bits,2,length(Octs)-1},{octets,Octs}];
-	    Len = length(Octs),
-	    [10,2,Len-1,20,Len,Octs];
-	Range =< 16#100000000  ->
-	    Octs = eint_positive(Val2),
-	    Len = length(Octs),
-	    [10,2,Len-1,20,Len,Octs];
-	Range =< 16#10000000000  ->
-	    Octs = eint_positive(Val2),
-	    Len = length(Octs),
-	    [10,3,Len-1,20,Len,Octs];
+	Range =< (1 bsl (255*8))  ->
+            Octs = binary:encode_unsigned(Val2),
+            RangeOcts = binary:encode_unsigned(Range - 1),
+            OctsLen = erlang:byte_size(Octs),
+            RangeOctsLen = erlang:byte_size(RangeOcts),
+            LengthBitsNeeded = asn1rt_per_bin:minimum_bits(RangeOctsLen - 1),
+            [10,LengthBitsNeeded,OctsLen-1,20,OctsLen,Octs];
 	true  ->
 	    exit({not_supported,{integer_range,Range}})
     end;
@@ -661,18 +654,12 @@ decode_constrained_number(Buffer,{Lb,_Ub},Range) ->
 		getoctets(Buffer,1);
 	    Range  =< 65536 ->
 		getoctets(Buffer,2);
-	    Range =< 16#1000000  ->
-		{Len,Bytes2} = decode_length(Buffer,{1,3}),
-		{Octs,Bytes3} = getoctets_as_bin(Bytes2,Len),
-		{dec_pos_integer(Octs),Bytes3};
-	    Range =< 16#100000000  ->
-		{Len,Bytes2} = decode_length(Buffer,{1,4}),
-		{Octs,Bytes3} = getoctets_as_bin(Bytes2,Len),
-		{dec_pos_integer(Octs),Bytes3};
-	    Range =< 16#10000000000  ->
-		{Len,Bytes2} = decode_length(Buffer,{1,5}),
-		{Octs,Bytes3} = getoctets_as_bin(Bytes2,Len),
-		{dec_pos_integer(Octs),Bytes3};
+            Range =< (1 bsl (255*8))  ->
+                OList = binary:bin_to_list(binary:encode_unsigned(Range - 1)),
+                RangeOctLen = length(OList),
+                {Len, Bytes} = decode_length(Buffer, {1, RangeOctLen}),
+                {Octs, RestBytes} = getoctets_as_bin(Bytes, Len),
+                {binary:decode_unsigned(Octs), RestBytes};
 	    true  ->
 		exit({not_supported,{integer_range,Range}})
 	end,
@@ -736,17 +723,12 @@ decode_unconstrained_number(Bytes) ->
     {Ints,Bytes3} = getoctets_as_bin(Bytes2,Len),
     {dec_integer(Ints),Bytes3}.
 
-
-dec_pos_integer(Ints) ->
-    decpint(Ints).
 dec_integer(Bin = <<0:1,_:7,_/binary>>) ->  
     decpint(Bin);
 dec_integer(<<_:1,B:7,BitStr/bitstring>>) ->
     Size = bit_size(BitStr),
     <<I:Size>> = BitStr,
     (-128 + B) bsl bit_size(BitStr) bor I.
-
-    
     
 decpint(Bin) ->
     Size = bit_size(Bin),

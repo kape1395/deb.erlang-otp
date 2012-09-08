@@ -1,7 +1,7 @@
 # 
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 2001-2009. All Rights Reserved.
+# Copyright Ericsson AB 2001-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -139,9 +139,9 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 
 release_spec: opt
-	$(INSTALL_DIR) $(RELSYSDIR)/examples
-	$(INSTALL_DIR) $(RELSYSDIR)/examples/simple
-	$(INSTALL_DATA) $(ERL_FILES) $(TARGET_FILES) $(RELSYSDIR)/examples/simple
+	$(INSTALL_DIR) "$(RELSYSDIR)/examples"
+	$(INSTALL_DIR) "$(RELSYSDIR)/examples/simple"
+	$(INSTALL_DATA) $(ERL_FILES) $(TARGET_FILES) "$(RELSYSDIR)/examples/simple"
 
 
 release_docs_spec:

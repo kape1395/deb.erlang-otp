@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2007-2011. All Rights Reserved.
+ * Copyright Ericsson AB 2007-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -56,15 +56,13 @@
 
 typedef erts_aint32_t ErtsProcLocks;
 
-typedef struct erts_proc_lock_queues_t_ erts_proc_lock_queues_t;
-
 typedef struct erts_proc_lock_t_ {
 #if ERTS_PROC_LOCK_ATOMIC_IMPL
     erts_smp_atomic32_t flags;
 #else
     ErtsProcLocks flags;
 #endif
-    erts_proc_lock_queues_t *queues;
+    erts_tse_t *queue[ERTS_PROC_LOCK_MAX_BIT+1];
     Sint32 refc;
 #ifdef ERTS_PROC_LOCK_DEBUG
     erts_smp_atomic32_t locked[ERTS_PROC_LOCK_MAX_BIT+1];
@@ -214,6 +212,8 @@ void erts_lcnt_proc_lock_post_x(erts_proc_lock_t *lock, ErtsProcLocks locks, cha
 void erts_lcnt_proc_lock_unaquire(erts_proc_lock_t *lock, ErtsProcLocks locks);
 void erts_lcnt_proc_unlock(erts_proc_lock_t *lock, ErtsProcLocks locks);
 void erts_lcnt_proc_trylock(erts_proc_lock_t *lock, ErtsProcLocks locks, int res);
+
+void erts_lcnt_enable_proc_lock_count(int enable);
 
 #endif /* ERTS_ENABLE_LOCK_COUNT*/
 

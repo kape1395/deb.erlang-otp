@@ -29,7 +29,7 @@
 
 -record(state, 
         {
-	 version = "4.22", 
+	 version = "4.22.1", 
          mfv, 
          file, % .mib or .bin depending on which are compiled
          outdir = "./",

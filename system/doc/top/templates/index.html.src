@@ -2,7 +2,7 @@
 <!--
 %CopyrightBegin%
 
-Copyright Ericsson AB 2009-2010. All Rights Reserved.
+Copyright Ericsson AB 2009-2012. All Rights Reserved.
 
 The contents of this file are subject to the Erlang Public License,
 Version 1.1, (the "License"); you may not use this file except in
@@ -94,7 +94,7 @@ Some hints that may get you started faster
 <ul>
 
 <li>
-The complete Erlang language is described in the 
+The Erlang language is described in the 
 <a href="reference_manual/users_guide.html">Erlang Reference Manual</a>. 
 An Erlang tutorial can be found in 
 <a href="getting_started/users_guide.html">
@@ -108,6 +108,9 @@ In addition to the documentation here Erlang is described in several recent book
 </li>
 <li>
 <a href="http://www.pragprog.com/titles/jaerlang">"Programming Erlang"</a> from Pragmatic.
+</li>
+<li>
+<a href="http://www.manning.com/logan">"Erlang and OTP in Action"</a> from Manning.
 </li>
 </ul>
 <p>
@@ -136,23 +139,21 @@ tags support and more. See the <a href="#tools#/index.html">
 Tools</a> application for details.  
 <p>
 There is also an 
-<a href="http://erlide.sourceforge.net">
+<a href="http://erlide.org/index.html">
 Erlang plugin (ErlIDE) for Eclipse</a> if you prefer a more graphical 
 environment. ErlIDE is under active development with new features in almost every release.
 <li>When developing with Erlang/OTP you usually test your programs
 from the interactive shell (see <a href="getting_started/users_guide.html">
 Getting Started With Erlang</a>) where you can call individual
 functions. There is also a number of tools available, such as the graphical <a
-href="#debugger#/index.html" >Debugger</a>, the process
-manager <a href="#pman#/index.html" >Pman</a> and table
-viewer <a href="#tv#/index.html">TV</a>.
+href="#debugger#/index.html" >Debugger</a> and the <a href="#observer#/index.html" >Observer tool</a> for inspection of system information, ets and mnesia tables  etc.
 <p> Also note that there are some shell features like history list
 (control-p and control-n), in line editing (Emacs key bindings) and
 module and function name completion (tab) if the module is loaded.
 <p>
 
 <li>OpenSource users can ask questions
-and share experiences on the <a href="http://www.erlang.org/faq.html">
+and share experiences on the <a href="http://www.erlang.org/static/doc/mailinglist.html">
 Erlang questions mailing list</a>.  <p>
 
 <li>Before asking a question you can browse the <a

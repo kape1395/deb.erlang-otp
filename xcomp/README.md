@@ -291,6 +291,38 @@ and then do the cross build of the system.
 `otp_build release -a` will do the same as (5), and you will after this have
 to do a manual install either by doing (6), or (7).
 
+Testing the cross compiled system
+--------------------------------------
+Some of the tests that come with erlang use native code to test. This means
+that when cross compiling erlang you also have to cross compile test suites
+in order to run tests on the target host. To do this you first have to release
+the tests as usual.
+
+    $ make release_tests
+
+or
+
+    $ ./otp_build tests
+
+The tests will be released into `$ERL_TOP/release/tests`. After releasing the
+tests you have to install the tests on the build machine. You supply the same
+xcomp file as to `./otp_build` in (9).
+
+    $ cd $ERL_TOP/release/tests/test_server/
+    $ $ERL_TOP/bootstrap/bin/erl -eval 'ts:install([{xcomp,"<FILE>"}])' -s ts compile_testcases -s init stop
+
+You should get a lot of printouts as the testcases are compiled. Once done you
+should copy the entire `$ERL_TOP/release/tests` folder to the cross host system.
+
+Then go to the cross host system and setup the erlang installed in (4) or (5)
+to be in your `$PATH`. Then go to what previously was
+`$ERL_TOP/release/tests/test_server` and issue the following command.
+
+    $ erl -s ts install -s ts run all_tests -s init stop
+
+The configure should be skipped and all tests should hopefully pass. For more
+details about how to use ts run `erl -s ts help -s init stop`
+
 Currently Used Configuration Variables
 --------------------------------------
 
@@ -430,6 +462,10 @@ When a variable has been set, no warning will be issued.
     `configure` will fail unless this variable is set. Since no default
     value is used, `configure` will try to figure this out automatically.
 
+*   `erl_xcomp_double_middle` - `yes|no`. Defaults to `no`. 
+	If `yes`, the target system must have doubles in "middle-endian" format. If
+    `no`, it has "regular" endianness. 
+
 *   `erl_xcomp_clock_gettime_cpu_time` - `yes|no`. Defaults to `no`. If `yes`,
     the target system must have a working `clock_gettime()` implementation
     that can be used for retrieving process CPU time.
@@ -491,7 +527,7 @@ Copyright and License
 
 %CopyrightBegin%
 
-Copyright Ericsson AB 2009-2010. All Rights Reserved.
+Copyright Ericsson AB 2009-2012. All Rights Reserved.
 
 The contents of this file are subject to the Erlang Public License,
 Version 1.1, (the "License"); you may not use this file except in

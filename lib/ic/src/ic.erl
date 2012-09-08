@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 1997-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1997-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -250,7 +250,7 @@ make_erl_options(Opts) ->
     Optimize = Opts#options.optimize,
     PreProc = 
 	lists:flatten(
-	  lists:map(fun(D) -> io_lib:format("-I~s ", [ic_util:to_list(D)]) end, 
+	  lists:map(fun(D) -> io_lib:format("-I\"~s\" ", [ic_util:to_list(D)]) end,
 		    Includes1)++
 	  lists:map(
 	    fun ({Name, Value}) ->

@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 1999-2011. All Rights Reserved.
+# Copyright Ericsson AB 1999-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -128,6 +128,7 @@ ERL_COMPILE_FLAGS +=  \
 	$(ERL_IDL_FLAGS) \
 	-pa $(ERL_TOP)/lib/orber/include \
 	-pa $(ERL_TOP)/internal_tools/test_server/ebin \
+	-pa $(ERL_TOP)/lib/cosEvent/ebin \
 	-pa $(ERL_TOP)/lib/cosNotification/ebin \
 	-pa $(ERL_TOP)/lib/cosNotification/test/idl_output \
 	-pa $(ERL_TOP)/lib/cosTime/ebin \
@@ -182,11 +183,11 @@ release_spec:
 release_docs_spec:
 
 release_tests_spec: tests
-	$(INSTALL_DIR) $(RELSYSDIR)
+	$(INSTALL_DIR) "$(RELSYSDIR)"
 	$(INSTALL_DATA) $(IDL_FILES)  $(TEST_SPEC_FILE) \
-		$(COVER_FILE) $(ERL_FILES) $(RELSYSDIR)
-	$(INSTALL_DIR) $(RELSYSDIR)/$(IDLOUTDIR)
+		$(COVER_FILE) $(ERL_FILES) "$(RELSYSDIR)"
+	$(INSTALL_DIR) "$(RELSYSDIR)/$(IDLOUTDIR)"
 	$(INSTALL_DATA) $(GEN_TARGET_FILES) $(GEN_FILES) \
-		$(RELSYSDIR)/$(IDLOUTDIR)
-	$(INSTALL_DATA) $(SUITE_TARGET_FILES) $(RELSYSDIR)
+		"$(RELSYSDIR)/$(IDLOUTDIR)"
+	$(INSTALL_DATA) $(SUITE_TARGET_FILES) "$(RELSYSDIR)"
 

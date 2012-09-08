@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 2004-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2004-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -467,6 +467,10 @@ opt(Config) when is_list(Config) ->
     ?line {'EXIT',_} = (catch <<<<23,56,0,2>>:(anka)>>),
     ?line {'EXIT',_} = (catch <<<<23,56,0,2>>:64/float>>),
     ?line {'EXIT',_} = (catch <<<<23,56,0,2:7>>/binary>>),
+
+    %% Test constant propagation - there should be a warning.
+    BadSz = 2.5,
+    {'EXIT',_} = (catch <<<<N,56,0,2>>:BadSz/binary>>),
 
     case id(false) of
 	true -> ?line opt_dont_call_me();

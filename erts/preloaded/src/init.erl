@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1996-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -635,7 +635,15 @@ do_unload([M|Mods]) ->
     catch erlang:purge_module(M),
     do_unload(Mods);
 do_unload([]) ->
+    purge_all_hipe_refs(),
     ok.
+
+purge_all_hipe_refs() ->
+    case erlang:system_info(hipe_architecture) of
+	undefined -> ok;
+	_ -> hipe_bifs:remove_refs_from(all)
+    end.
+
 
 sub([H|T],L) -> sub(T,del(H,L));
 sub([],L)    -> L.
@@ -1252,7 +1260,11 @@ get_arguments([]) ->
     [].
 
 to_strings([H|T]) when is_atom(H) -> [atom_to_list(H)|to_strings(T)];
-to_strings([H|T]) when is_binary(H) -> [binary_to_list(H)|to_strings(T)];
+to_strings([H|T]) when is_binary(H) -> [try
+					    unicode:characters_to_list(H,file:native_name_encoding())
+					catch
+					    _:_ -> binary_to_list(H)
+					end|to_strings(T)];
 to_strings([])    -> [].
 
 get_argument(Arg,Flags) ->

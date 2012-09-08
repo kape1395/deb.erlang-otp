@@ -20,7 +20,7 @@
 -behaviour(wx_object).
 
 -export([start/0]).
--export([create_menus/2, get_attrib/1, get_tracer/0,
+-export([create_menus/2, get_attrib/1, get_tracer/0, set_status/1,
 	 create_txt_dialog/4, try_rpc/4, return_to_localnode/2]).
 
 -export([init/1, handle_event/2, handle_cast/2, terminate/2, code_change/3,
@@ -58,7 +58,8 @@
 	 perf_panel,
 	 active_tab,
 	 node,
-	 nodes
+	 nodes,
+	 prev_node=""
 	}).
 
 start() ->
@@ -72,6 +73,9 @@ create_menus(Object, Menus) when is_list(Menus) ->
 
 get_attrib(What) ->
     wx_object:call(observer, {get_attrib, What}).
+
+set_status(What) ->
+    wx_object:cast(observer, {status_bar, What}).
 
 get_tracer() ->
     wx_object:call(observer, get_tracer).
@@ -191,10 +195,13 @@ setup(#state{frame = Frame} = State) ->
 %%Callbacks
 handle_event(#wx{event=#wxNotebook{type=command_notebook_page_changing}},
 	     #state{active_tab=Previous, node=Node} = State) ->
-    Pid = get_active_pid(State),
-    Previous ! not_active,
-    Pid ! {active, Node},
-    {noreply, State#state{active_tab=Pid}};
+    case get_active_pid(State) of
+	Previous -> {noreply, State};
+	Pid ->
+	    Previous ! not_active,
+	    Pid ! {active, Node},
+	    {noreply, State#state{active_tab=Pid}}
+    end;
 
 handle_event(#wx{event = #wxClose{}}, State) ->
     {stop, normal, State};
@@ -258,20 +265,21 @@ handle_event(#wx{id = ?ID_CONNECT, event = #wxCommand{type = command_menu_select
 handle_event(#wx{id = ?ID_PING, event = #wxCommand{type = command_menu_selected}},
 	     #state{frame = Frame} = State) ->
     UpdState = case create_connect_dialog(ping, State) of
-		   cancel ->  State;
+		   cancel -> State;
 		   {value, Value} when is_list(Value) ->
 		       try
 			   Node = list_to_atom(Value),
 			   case net_adm:ping(Node) of
 			       pang ->
 				   create_txt_dialog(Frame, "Connect failed", "Pang", ?wxICON_EXCLAMATION),
-				   State;
+				   State#state{prev_node=Value};
 			       pong ->
-				   change_node_view(Node, State)
+				   State1 = change_node_view(Node, State),
+				   State1#state{prev_node=Value}
 			   end
 		       catch _:_ ->
 			       create_txt_dialog(Frame, "Connect failed", "Pang", ?wxICON_EXCLAMATION),
-			       State
+			       State#state{prev_node=Value}
 		       end
 	       end,
     {noreply, UpdState};
@@ -287,6 +295,10 @@ handle_event(Event, State) ->
     Pid = get_active_pid(State),
     Pid ! Event,
     {noreply, State}.
+
+handle_cast({status_bar, Msg}, State=#state{status_bar=SB}) ->
+    wxStatusBar:setStatusText(SB, Msg),
+    {noreply, State};
 
 handle_cast(_Cast, State) ->
     {noreply, State}.
@@ -341,7 +353,7 @@ terminate(_Reason, #state{frame = Frame}) ->
     ok.
 
 code_change(_, _, State) ->
-    {stop, not_yet_implemented, State}.
+    {ok, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -401,7 +413,9 @@ connect2(NodeName, Opts, Cookie) ->
     end.
 
 change_node_view(Node, State) ->
-    get_active_pid(State) ! {active, Node},
+    Tab = get_active_pid(State),
+    Tab ! not_active,
+    Tab ! {active, Node},
     StatusText = ["Observer - " | atom_to_list(Node)],
     wxFrame:setTitle(State#state.frame, StatusText),
     wxStatusBar:setStatusText(State#state.status_bar, StatusText),
@@ -439,8 +453,8 @@ pid2panel(Pid, #state{pro_panel=Pro, sys_panel=Sys,
     end.
 
 
-create_connect_dialog(ping, #state{frame = Frame}) ->
-    Dialog = wxTextEntryDialog:new(Frame, "Connect to node"),
+create_connect_dialog(ping, #state{frame = Frame, prev_node=Prev}) ->
+    Dialog = wxTextEntryDialog:new(Frame, "Connect to node", [{value, Prev}]),
     case wxDialog:showModal(Dialog) of
 	?wxID_OK ->
 	    Value = wxTextEntryDialog:getValue(Dialog),
@@ -560,13 +574,26 @@ remove_menu_items([], _MB) ->
     ok.
 
 get_nodes() ->
-    Nodes = [node()| nodes()],
+    Nodes0 = case erlang:is_alive() of
+		false -> [];
+		true  ->
+		    case net_adm:names() of
+			{error, _} -> nodes();
+			{ok, Names} ->
+			    epmd_nodes(Names) ++ nodes()
+		    end
+	     end,
+    Nodes = lists:usort(Nodes0),
     {_, Menues} =
 	lists:foldl(fun(Node, {Id, Acc}) when Id < ?LAST_NODES_MENU_ID ->
 			    {Id + 1, [#create_menu{id=Id + ?FIRST_NODES_MENU_ID,
 						   text=atom_to_list(Node)} | Acc]}
 		    end, {1, []}, Nodes),
     {Nodes, lists:reverse(Menues)}.
+
+epmd_nodes(Names) ->
+    [_, Host] = string:tokens(atom_to_list(node()),"@"),
+    [list_to_atom(Name ++ [$@|Host]) || {Name, _} <- Names].
 
 update_node_list(State = #state{menubar=MenuBar}) ->
     {Nodes, NodesMenuItems} = get_nodes(),

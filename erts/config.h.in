@@ -31,6 +31,10 @@
 /* Define if you want to disable vfork. */
 #undef DISABLE_VFORK
 
+/* Define to 1 if your processor stores the words in a double in middle-endian
+   format (like some ARMs). */
+#undef DOUBLE_MIDDLE_ENDIAN
+
 /* Define if you want to enable child waiter thread */
 #undef ENABLE_CHILD_WAITER_THREAD
 
@@ -43,9 +47,6 @@
 
 /* Define if you have kernel poll and want to use it */
 #undef ERTS_ENABLE_KERNEL_POLL
-
-/* Define if the hybrid emulator is built */
-#undef ERTS_HAVE_HYBRID_EMU
 
 /* Define if the smp emulator is built */
 #undef ERTS_HAVE_SMP_EMU
@@ -310,6 +311,14 @@
    don't. */
 #undef HAVE_DECL_GETRLIMIT
 
+/* Define to 1 if you have the declaration of `IN6ADDR_ANY_INIT', and to 0 if
+   you don't. */
+#undef HAVE_DECL_IN6ADDR_ANY_INIT
+
+/* Define to 1 if you have the declaration of `IN6ADDR_LOOPBACK_INIT', and to
+   0 if you don't. */
+#undef HAVE_DECL_IN6ADDR_LOOPBACK_INIT
+
 /* Define to 1 if you have the declaration of `posix2time', and to 0 if you
    don't. */
 #undef HAVE_DECL_POSIX2TIME
@@ -434,6 +443,10 @@
    don't. */
 #undef HAVE_DECL_SETRLIMIT
 
+/* Define to 1 if you have the declaration of `time2posix', and to 0 if you
+   don't. */
+#undef HAVE_DECL_TIME2POSIX
+
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
 #undef HAVE_DIRENT_H
@@ -515,6 +528,12 @@
 
 /* Define if ipv6 is present */
 #undef HAVE_IN6
+
+/* Define to 1 if you have the variable in6addr_any declared. */
+#undef HAVE_IN6ADDR_ANY
+
+/* Define to 1 if you have the variable in6addr_loopback declared. */
+#undef HAVE_IN6ADDR_LOOPBACK
 
 /* Define to 1 if you have the `inet_pton' function. */
 #undef HAVE_INET_PTON
@@ -796,6 +815,9 @@
 
 /* Define if termcap functions exists */
 #undef HAVE_TERMCAP
+
+/* Define to 1 if you have the `time2posix' function. */
+#undef HAVE_TIME2POSIX
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H

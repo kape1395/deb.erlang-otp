@@ -253,18 +253,19 @@ typedef enum {
  * eachother. Most frequent - lowest bit number.
  */
 
-#define ERTS_SSI_AUX_WORK_DD			(((erts_aint32_t) 1) << 0)
-#define ERTS_SSI_AUX_WORK_DD_THR_PRGR		(((erts_aint32_t) 1) << 1)
-#define ERTS_SSI_AUX_WORK_FIX_ALLOC_DEALLOC	(((erts_aint32_t) 1) << 2)
-#define ERTS_SSI_AUX_WORK_FIX_ALLOC_LOWER_LIM	(((erts_aint32_t) 1) << 3)
-#define ERTS_SSI_AUX_WORK_ASYNC_READY		(((erts_aint32_t) 1) << 4)
-#define ERTS_SSI_AUX_WORK_ASYNC_READY_CLEAN	(((erts_aint32_t) 1) << 5)
-#define ERTS_SSI_AUX_WORK_MISC_THR_PRGR		(((erts_aint32_t) 1) << 6)
-#define ERTS_SSI_AUX_WORK_MISC			(((erts_aint32_t) 1) << 7)
-#define ERTS_SSI_AUX_WORK_CHECK_CHILDREN	(((erts_aint32_t) 1) << 8)
-#define ERTS_SSI_AUX_WORK_SET_TMO		(((erts_aint32_t) 1) << 9)
-#define ERTS_SSI_AUX_WORK_MSEG_CACHE_CHECK	(((erts_aint32_t) 1) << 10)
-#define ERTS_SSI_AUX_WORK_REAP_PORTS		(((erts_aint32_t) 1) << 11)
+#define ERTS_SSI_AUX_WORK_DELAYED_AW_WAKEUP	(((erts_aint32_t) 1) << 0)
+#define ERTS_SSI_AUX_WORK_DD			(((erts_aint32_t) 1) << 1)
+#define ERTS_SSI_AUX_WORK_DD_THR_PRGR		(((erts_aint32_t) 1) << 2)
+#define ERTS_SSI_AUX_WORK_FIX_ALLOC_DEALLOC	(((erts_aint32_t) 1) << 3)
+#define ERTS_SSI_AUX_WORK_FIX_ALLOC_LOWER_LIM	(((erts_aint32_t) 1) << 4)
+#define ERTS_SSI_AUX_WORK_ASYNC_READY		(((erts_aint32_t) 1) << 5)
+#define ERTS_SSI_AUX_WORK_ASYNC_READY_CLEAN	(((erts_aint32_t) 1) << 6)
+#define ERTS_SSI_AUX_WORK_MISC_THR_PRGR		(((erts_aint32_t) 1) << 7)
+#define ERTS_SSI_AUX_WORK_MISC			(((erts_aint32_t) 1) << 8)
+#define ERTS_SSI_AUX_WORK_CHECK_CHILDREN	(((erts_aint32_t) 1) << 9)
+#define ERTS_SSI_AUX_WORK_SET_TMO		(((erts_aint32_t) 1) << 10)
+#define ERTS_SSI_AUX_WORK_MSEG_CACHE_CHECK	(((erts_aint32_t) 1) << 11)
+#define ERTS_SSI_AUX_WORK_REAP_PORTS		(((erts_aint32_t) 1) << 12)
 
 typedef struct ErtsSchedulerSleepInfo_ ErtsSchedulerSleepInfo;
 
@@ -403,6 +404,11 @@ typedef struct {
 } ErtsSchedWallTime;
 
 typedef struct {
+    int sched;
+    erts_aint32_t aux_work;
+} ErtsDelayedAuxWorkWakeupJob;
+
+typedef struct {
     int sched_id;
     ErtsSchedulerData *esdp;
     ErtsSchedulerSleepInfo *ssi;
@@ -430,6 +436,13 @@ typedef struct {
 #endif
 	void *queue;
     } async_ready;
+#endif
+#ifdef ERTS_SMP
+    struct {
+	int *sched2jix;
+	int jix;
+	ErtsDelayedAuxWorkWakeupJob *job;
+    } delayed_wakeup;
 #endif
 } ErtsAuxWorkData;
 
@@ -464,7 +477,6 @@ struct ErtsSchedulerData_ {
     int virtual_reds;
     int cpu_id;			/* >= 0 when bound */
     ErtsAuxWorkData aux_work_data;
-
     ErtsAtomCacheMap atom_cache_map;
 
     ErtsSchedAllocData alloc_data;
@@ -749,24 +761,6 @@ struct process {
 #endif
 #endif
 
-#ifdef HYBRID
-    Eterm *rrma;                /* Remembered roots to Message Area */
-    Eterm **rrsrc;              /* The source of the root */
-    Uint nrr;                   /* Number of remembered roots */
-    Uint rrsz;                  /* Size of root array */
-#endif
-
-#ifdef HYBRID
-    Uint active;                /* Active since last major collection? */
-    Uint active_index;          /* Index in the active process array */
-#endif
- 
-#ifdef INCREMENTAL
-    Process *active_next; /* Active processes to scan for roots */
-    Process *active_prev; /* in collection of the message area  */
-    Eterm *scan_top;
-#endif
-
 #ifdef CHECK_FOR_HOLES
     Eterm* last_htop;		/* No need to scan the heap below this point. */
     ErlHeapFragment* last_mbuf;	/* No need to scan beyond this mbuf. */
@@ -888,10 +882,6 @@ Eterm* erts_set_hole_marker(Eterm* ptr, Uint sz);
 #endif
 
 extern Process** process_tab;
-#ifdef HYBRID
-extern Uint erts_num_active_procs;
-extern Process** erts_active_procs;
-#endif
 extern Uint erts_max_processes;
 extern Uint erts_process_tab_index_mask;
 extern Uint erts_default_process_flags;
@@ -1096,7 +1086,9 @@ ErtsProcList *erts_proclist_create(Process *);
 void erts_proclist_destroy(ErtsProcList *);
 int erts_proclist_same(ErtsProcList *, Process *);
 
-int erts_sched_set_wakeup_limit(char *str);
+int erts_sched_set_wakeup_other_thresold(char *str);
+int erts_sched_set_wakeup_other_type(char *str);
+int erts_sched_set_busy_wait_threshold(char *str);
 
 #if defined(ERTS_SMP) && defined(ERTS_ENABLE_LOCK_CHECK)
 int erts_dbg_check_halloc_lock(Process *p);
@@ -1400,10 +1392,14 @@ ERTS_GLB_INLINE Eterm erts_get_current_pid(void);
 ERTS_GLB_INLINE Uint erts_get_scheduler_id(void);
 ERTS_GLB_INLINE ErtsRunQueue *erts_get_runq_proc(Process *p);
 ERTS_GLB_INLINE ErtsRunQueue *erts_get_runq_current(ErtsSchedulerData *esdp);
+#ifndef ERTS_ENABLE_LOCK_COUNT
 ERTS_GLB_INLINE void erts_smp_runq_lock(ErtsRunQueue *rq);
+#endif
 ERTS_GLB_INLINE int erts_smp_runq_trylock(ErtsRunQueue *rq);
 ERTS_GLB_INLINE void erts_smp_runq_unlock(ErtsRunQueue *rq);
+#ifndef ERTS_ENABLE_LOCK_COUNT
 ERTS_GLB_INLINE void erts_smp_xrunq_lock(ErtsRunQueue *rq, ErtsRunQueue *xrq);
+#endif
 ERTS_GLB_INLINE void erts_smp_xrunq_unlock(ErtsRunQueue *rq, ErtsRunQueue *xrq);
 ERTS_GLB_INLINE void erts_smp_runqs_lock(ErtsRunQueue *rq1, ErtsRunQueue *rq2);
 ERTS_GLB_INLINE void erts_smp_runqs_unlock(ErtsRunQueue *rq1, ErtsRunQueue *rq2);
@@ -1492,6 +1488,12 @@ erts_get_runq_current(ErtsSchedulerData *esdp)
 #endif
 }
 
+#ifdef ERTS_ENABLE_LOCK_COUNT
+
+#define erts_smp_runq_lock(rq)	erts_smp_mtx_lock_x(&(rq)->mtx, __FILE__, __LINE__)
+
+#else
+
 ERTS_GLB_INLINE void
 erts_smp_runq_lock(ErtsRunQueue *rq)
 {
@@ -1499,6 +1501,8 @@ erts_smp_runq_lock(ErtsRunQueue *rq)
     erts_smp_mtx_lock(&rq->mtx);
 #endif
 }
+
+#endif
 
 ERTS_GLB_INLINE int
 erts_smp_runq_trylock(ErtsRunQueue *rq)
@@ -1518,6 +1522,31 @@ erts_smp_runq_unlock(ErtsRunQueue *rq)
 #endif
 }
 
+#ifdef ERTS_ENABLE_LOCK_COUNT
+
+#define erts_smp_xrunq_lock(rq, xrq)	erts_smp_xrunq_lock_x((rq), (xrq), __FILE__, __LINE__)
+
+ERTS_GLB_INLINE void
+erts_smp_xrunq_lock_x(ErtsRunQueue *rq, ErtsRunQueue *xrq, char* file, int line)
+{
+#ifdef ERTS_SMP
+    ERTS_SMP_LC_ASSERT(erts_smp_lc_mtx_is_locked(&rq->mtx));
+    if (xrq != rq) {
+	if (erts_smp_mtx_trylock(&xrq->mtx) == EBUSY) {
+	    if (rq < xrq)
+		erts_smp_mtx_lock_x(&xrq->mtx, file, line);
+	    else {
+		erts_smp_mtx_unlock(&rq->mtx);
+		erts_smp_mtx_lock_x(&xrq->mtx, file, line);
+		erts_smp_mtx_lock_x(&rq->mtx, file, line);
+	    }
+	}
+    }
+#endif
+}
+
+#else
+
 ERTS_GLB_INLINE void
 erts_smp_xrunq_lock(ErtsRunQueue *rq, ErtsRunQueue *xrq)
 {
@@ -1536,6 +1565,8 @@ erts_smp_xrunq_lock(ErtsRunQueue *rq, ErtsRunQueue *xrq)
     }
 #endif
 }
+
+#endif
 
 ERTS_GLB_INLINE void
 erts_smp_xrunq_unlock(ErtsRunQueue *rq, ErtsRunQueue *xrq)

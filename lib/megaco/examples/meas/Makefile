@@ -1,7 +1,7 @@
 # 
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 2002-2011. All Rights Reserved.
+# Copyright Ericsson AB 2002-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -131,12 +131,12 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 
 release_spec: opt
-	$(INSTALL_DIR)  $(EXAMPLE_RELSYSDIR)
-	$(INSTALL_DIR)  $(MEAS_RELSYSDIR)
-	$(INSTALL_DATA) $(MESSAGE_PACKAGES) $(MEAS_RELSYSDIR)
-	$(INSTALL_DATA) $(SCRIPT_SKELETONS) $(MEAS_RELSYSDIR)
-	$(INSTALL_DATA) $(TARGET_FILES) $(MEAS_RELSYSDIR)
-	$(INSTALL_DATA) $(ERL_FILES) $(MEAS_RELSYSDIR)
+	$(INSTALL_DIR)  "$(EXAMPLE_RELSYSDIR)"
+	$(INSTALL_DIR)  "$(MEAS_RELSYSDIR)"
+	$(INSTALL_DATA) $(MESSAGE_PACKAGES) "$(MEAS_RELSYSDIR)"
+	$(INSTALL_DATA) $(SCRIPT_SKELETONS) "$(MEAS_RELSYSDIR)"
+	$(INSTALL_DATA) $(TARGET_FILES) "$(MEAS_RELSYSDIR)"
+	$(INSTALL_DATA) $(ERL_FILES) "$(MEAS_RELSYSDIR)"
 
 
 release_docs_spec:

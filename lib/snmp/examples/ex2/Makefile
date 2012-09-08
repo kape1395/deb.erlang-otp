@@ -2,7 +2,7 @@
 
 # %CopyrightBegin%
 # 
-# Copyright Ericsson AB 2006-2009. All Rights Reserved.
+# Copyright Ericsson AB 2006-2012. All Rights Reserved.
 # 
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -47,7 +47,7 @@ ERL_COMPILE_FLAGS += -I../include \
 # Release directory specification
 # ----------------------------------------------------
 RELSYSDIR         = $(RELEASE_PATH)/lib/snmp-$(VSN)
-EXAMPLE_RELSYSDIR = $(RELSYSDIR)/examples
+EXAMPLE_RELSYSDIR = "$(RELSYSDIR)/examples"
 EX2_RELSYSDIR     = $(EXAMPLE_RELSYSDIR)/ex2
 
 # ----------------------------------------------------

@@ -1,4 +1,4 @@
-{"1.7",
+{"1.8",
 % This version does not change anything of the runtime modules
 % Only changes in compile time modules and thus no need for upgrade on target
 [

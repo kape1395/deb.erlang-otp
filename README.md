@@ -54,7 +54,7 @@ Copyright and License
 
 > %CopyrightBegin%
 >
-> Copyright Ericsson AB 2010. All Rights Reserved.
+> Copyright Ericsson AB 2010-2012. All Rights Reserved.
 >
 > The contents of this file are subject to the Erlang Public License,
 > Version 1.1, (the "License"); you may not use this file except in
@@ -73,4 +73,4 @@ Copyright and License
 
    [1]: http://www.erlang.org
    [2]: http://wiki.github.com/erlang/otp/submitting-patches
-   [3]: http://www.erlang.org/faq.html
+   [3]: http://www.erlang.org/static/doc/mailinglist.html

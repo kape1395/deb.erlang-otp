@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 2009-2011. All Rights Reserved.
+ * Copyright Ericsson AB 2009-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -226,6 +226,15 @@ ERL_NIF_INIT_DECL(NAME)			\
 }                                       \
 ERL_NIF_INIT_EPILOGUE
 
+#if defined(USE_DYNAMIC_TRACE) && (defined(USE_DTRACE) || defined(USE_SYSTEMTAP))
+#define HAVE_USE_DTRACE 1
+#endif
+
+#ifdef HAVE_USE_DTRACE
+ERL_NIF_TERM erl_nif_user_trace_s1(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+ERL_NIF_TERM erl_nif_user_trace_i4s4(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+ERL_NIF_TERM erl_nif_user_trace_n(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+#endif
 
 #endif /* __ERL_NIF_H__ */
 

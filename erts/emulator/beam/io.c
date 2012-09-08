@@ -440,6 +440,7 @@ setup_port(Port* prt, Eterm pid, erts_driver_t *driver,
     sys_strcpy(new_name, name);
     erts_smp_runq_lock(runq);
     erts_smp_port_state_lock(prt);    
+    prt->os_pid = -1;
     prt->status = ERTS_PORT_SFLG_CONNECTED | xstatus;
     prt->snapshot = erts_smp_atomic32_read_nob(&erts_ports_snapshot);    
     old_name = prt->name;
@@ -625,7 +626,11 @@ erts_open_driver(erts_driver_t* driver,	/* Pointer to driver. */
 	port->lock = erts_alloc(ERTS_ALC_T_PORT_LOCK,
 					      sizeof(erts_smp_mtx_t));
 	erts_smp_mtx_init_x(port->lock,
+#ifdef ERTS_ENABLE_LOCK_COUNT
+			    (erts_lcnt_rt_options & ERTS_LCNT_OPT_PORTLOCK) ? "port_lock" : NULL,
+#else
 			    "port_lock",
+#endif
 			    port->id);
 	xstatus |= ERTS_PORT_SFLG_PORT_SPECIFIC_LOCK;
     }
@@ -783,7 +788,13 @@ driver_create_port(ErlDrvPort creator_port_ix, /* Creating port */
 	creator_port->xports = xplp;
 	port->lock = erts_alloc(ERTS_ALC_T_PORT_LOCK,
 					      sizeof(erts_smp_mtx_t));
-	erts_smp_mtx_init_locked_x(port->lock, "port_lock", port_id);
+	erts_smp_mtx_init_locked_x(port->lock,
+#ifdef ERTS_ENABLE_LOCK_COUNT
+				   (erts_lcnt_rt_options & ERTS_LCNT_OPT_PORTLOCK) ? "port_lock" : NULL,
+#else
+				   "port_lock",
+#endif
+				   port_id);
 	xstatus |= ERTS_PORT_SFLG_PORT_SPECIFIC_LOCK;
     }
 
@@ -1303,7 +1314,7 @@ void init_io(void)
 
     pdl_init();
 
-    if (erts_sys_getenv("ERL_MAX_PORTS", maxports, &maxportssize) == 0) 
+    if (erts_sys_getenv_raw("ERL_MAX_PORTS", maxports, &maxportssize) == 0) 
 	erts_max_ports = atoi(maxports);
     else
 	erts_max_ports = sys_max_files();
@@ -1347,7 +1358,13 @@ void init_io(void)
 	erts_smp_atomic_init_nob(&erts_port[i].refc, 0);
 	erts_port[i].lock = NULL;
 	erts_port[i].xports = NULL;
-	erts_smp_spinlock_init_x(&erts_port[i].state_lck, "port_state", make_small(i));
+	erts_smp_spinlock_init_x(&erts_port[i].state_lck,
+#ifdef ERTS_ENABLE_LOCK_COUNT
+				 (erts_lcnt_rt_options & ERTS_LCNT_OPT_PORTLOCK) ? "port_state" : NULL,
+#else
+				 "port_state",
+#endif
+				 make_small(0));
 #endif
 	erts_port[i].tracer_proc = NIL;
 	erts_port[i].trace_flags = 0;
@@ -1379,6 +1396,27 @@ void init_io(void)
     erts_smp_tsd_set(driver_list_lock_status_key, NULL);
     erts_smp_mtx_unlock(&erts_driver_list_lock);
 }
+
+#if defined(ERTS_ENABLE_LOCK_COUNT) && defined(ERTS_SMP)
+void erts_lcnt_enable_io_lock_count(int enable) {
+    int i;
+
+    for (i = 0; i < erts_max_ports; i++) {
+	Port* p = &erts_port[i];
+	if (enable) {
+	    erts_lcnt_init_lock_x(&p->state_lck.lcnt, "port_state", ERTS_LCNT_LT_SPINLOCK, make_small(i));
+	    if (p->lock) {
+		erts_lcnt_init_lock_x(&p->lock->lcnt, "port_lock", ERTS_LCNT_LT_MUTEX, make_small(i));
+	    }
+	} else {
+	    erts_lcnt_destroy_lock(&p->state_lck.lcnt);
+	    if (p->lock) {
+		erts_lcnt_destroy_lock(&p->lock->lcnt);
+	    }
+	}
+    }
+}
+#endif
 
 /*
  * Buffering of data when using line oriented I/O on ports
@@ -3222,6 +3260,8 @@ driver_deliver_term(ErlDrvPort port,
 	    Uint size = ptr[1];
 	    Uint offset = ptr[2];
 
+	    erts_smp_atomic_add_nob(&erts_bytes_in, (erts_aint_t) size);
+
 	    if (size <= ERL_ONHEAP_BIN_LIMIT) {
 		ErlHeapBin* hbp = (ErlHeapBin *) hp;
 		hp += heap_bin_size(size);
@@ -3253,6 +3293,9 @@ driver_deliver_term(ErlDrvPort port,
 	case ERL_DRV_BUF2BINARY: { /* char*, size */
 	    byte *bufp = (byte *) ptr[0];
 	    Uint size = (Uint) ptr[1];
+
+	    erts_smp_atomic_add_nob(&erts_bytes_in, (erts_aint_t) size);
+
 	    if (size <= ERL_ONHEAP_BIN_LIMIT) {
 		ErlHeapBin* hbp = (ErlHeapBin *) hp;
 		hp += heap_bin_size(size);
@@ -3289,6 +3332,7 @@ driver_deliver_term(ErlDrvPort port,
 	}
 
 	case ERL_DRV_STRING: /* char*, length */
+	    erts_smp_atomic_add_nob(&erts_bytes_in, (erts_aint_t) ptr[1]);
 	    mess = buf_to_intlist(&hp, (char*)ptr[0], ptr[1], NIL);
 	    ptr += 2;
 	    break;
@@ -5183,11 +5227,11 @@ int null_func(void)
 int
 erl_drv_putenv(char *key, char *value)
 {
-    return erts_write_env(key, value);
+    return erts_sys_putenv_raw(key, value);
 }
 
 int
 erl_drv_getenv(char *key, char *value, size_t *value_size)
 {
-    return erts_sys_getenv(key, value, value_size);
+    return erts_sys_getenv_raw(key, value, value_size);
 }

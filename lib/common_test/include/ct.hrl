@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2003-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2003-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -19,3 +19,16 @@
 
 -include_lib("test_server/include/test_server.hrl").
 
+%% the log level is used as argument to any CT logging function
+-define(MIN_IMPORTANCE, 0 ).
+-define(LOW_IMPORTANCE, 25).
+-define(STD_IMPORTANCE, 50).
+-define(HI_IMPORTANCE,  75).
+-define(MAX_IMPORTANCE, 99).
+
+%% verbosity thresholds to filter out logging printouts
+-define(MIN_VERBOSITY, 0  ).  %% turn logging off
+-define(LOW_VERBOSITY, 25 ).
+-define(STD_VERBOSITY, 50 ).
+-define(HI_VERBOSITY,  75 ).
+-define(MAX_VERBOSITY, 100).

@@ -2,7 +2,7 @@
 
 {application, edoc,
  [{description, "EDoc"},
-  {vsn, "0.7.9.1"},
+  {vsn, "0.7.10"},
   {modules, [edoc,
 	     edoc_data,
 	     edoc_doclet,

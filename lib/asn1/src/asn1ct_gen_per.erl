@@ -321,19 +321,13 @@ effective_constr(_,[]) ->
     [];
 effective_constr('SingleValue',List) ->
     SVList = lists:flatten(lists:map(fun(X)->element(2,X)end,List)),
-    % sort and remove duplicates
-    SortedSVList = lists:sort(SVList),
-    RemoveDup = fun([],_) ->[];
-		   ([H],_) -> [H];
-		   ([H,H|T],F) -> F([H|T],F);
-		   ([H|T],F) -> [H|F(T,F)]
-		end,
-    
-    case RemoveDup(SortedSVList,RemoveDup) of
+    %% Sort and remove duplicates before generating SingleValue or ValueRange
+    %% In case of ValueRange, also check for 'MIN and 'MAX'
+    case lists:usort(SVList) of
 	[N] ->
 	    [{'SingleValue',N}];
-	L when is_list(L) -> 
-	    [{'ValueRange',{hd(L),lists:last(L)}}]
+	L when is_list(L) ->
+	    [{'ValueRange',{least_Lb(L),greatest_Ub(L)}}]
     end;
 effective_constr('ValueRange',List) ->
     LBs = lists:map(fun({_,{Lb,_}})-> Lb end,List),
@@ -1405,19 +1399,21 @@ get_object_field(Name,ObjectFields) ->
 %% have been specified within a SEQUENCE, therefore we construct a fake sequence type here
 %% so that we can generate code for it
 extaddgroup2sequence(ExtList) ->
-    extaddgroup2sequence(ExtList,[]).
+    extaddgroup2sequence(ExtList,0,[]).
 
-extaddgroup2sequence([{'ExtensionAdditionGroup',Number0}|T],Acc) ->
+extaddgroup2sequence([{'ExtensionAdditionGroup',Number0}|T],ExtNum,Acc) ->
     Number = case Number0 of undefined -> 1; _ -> Number0 end,
     {ExtGroupComps,['ExtensionAdditionGroupEnd'|T2]} =
      lists:splitwith(fun(Elem) -> is_record(Elem,'ComponentType') end,T),
-    extaddgroup2sequence(T2,[#'ComponentType'{
-                                  name='ExtAddGroup',
-                                  typespec=#type{def=#'SEQUENCE'{
-						   extaddgroup=Number,
-						   components=ExtGroupComps}},
-				  prop='OPTIONAL'}|Acc]);
-extaddgroup2sequence([C|T],Acc) ->
-    extaddgroup2sequence(T,[C|Acc]);
-extaddgroup2sequence([],Acc) ->
+    extaddgroup2sequence(T2,ExtNum+1,
+			 [#'ComponentType'{
+			     name=list_to_atom("ExtAddGroup"++
+						   integer_to_list(ExtNum+1)),
+			     typespec=#type{def=#'SEQUENCE'{
+					      extaddgroup=Number,
+					      components=ExtGroupComps}},
+			     prop='OPTIONAL'}|Acc]);
+extaddgroup2sequence([C|T],ExtNum,Acc) ->
+    extaddgroup2sequence(T,ExtNum,[C|Acc]);
+extaddgroup2sequence([],_,Acc) ->
     lists:reverse(Acc).

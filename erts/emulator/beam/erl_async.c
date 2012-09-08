@@ -253,7 +253,9 @@ erts_get_async_ready_queue(Uint sched_id)
 
 static ERTS_INLINE void async_add(ErtsAsync *a, ErtsAsyncQ* q)
 {
+#ifdef USE_VM_PROBES
     int len;
+#endif
 
     if (is_internal_port(a->port)) {
 #if ERTS_USE_ASYNC_READY_Q
@@ -291,7 +293,9 @@ static ERTS_INLINE ErtsAsync *async_get(ErtsThrQ_t *q,
     int saved_fin_deq = 0;
     ErtsThrQFinDeQ_t fin_deq;
 #endif
+#ifdef USE_VM_PROBES
     int len;
+#endif
 
     while (1) {
 	ErtsAsync *a = (ErtsAsync *) erts_thr_q_dequeue(q);
@@ -390,6 +394,8 @@ static ERTS_INLINE void call_async_ready(ErtsAsync *a)
 	}
 	erts_port_release(p);
     }
+    if (a->pdl)
+	driver_pdl_dec_refc(a->pdl);
     if (a->hndl)
 	erts_ddll_dereference_driver(a->hndl);
 }
@@ -398,9 +404,6 @@ static ERTS_INLINE void async_reply(ErtsAsync *a, ErtsThrQPrepEnQ_t *prep_enq)
 {
 #if ERTS_USE_ASYNC_READY_Q
     ErtsAsyncReadyQ *arq;
-
-    if (a->pdl)
-	driver_pdl_dec_refc(a->pdl);
 
 #if ERTS_ASYNC_PRINT_JOB
     erts_fprintf(stderr, "=>> %ld\n", a->async_id);
@@ -421,8 +424,6 @@ static ERTS_INLINE void async_reply(ErtsAsync *a, ErtsThrQPrepEnQ_t *prep_enq)
 #else /* ERTS_USE_ASYNC_READY_Q */
 
 	call_async_ready(a);
-	if (a->pdl)
-	    driver_pdl_dec_refc(a->pdl);
 	erts_free(ERTS_ALC_T_ASYNC, (void *) a);
 
 #endif /* ERTS_USE_ASYNC_READY_Q */

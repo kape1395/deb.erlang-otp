@@ -19,7 +19,7 @@
 
 {application, et,
  [{description, "Event Tracer"},
-  {vsn, "1.4.4.1"},
+  {vsn, "1.4.4.2"},
   {modules,
    [
     et,

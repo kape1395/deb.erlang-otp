@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 1997-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1997-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -75,11 +75,11 @@ BOOL WINAPI ctrl_handler_ignore_break(DWORD dwCtrlType)
 	return TRUE;
 	break;
     case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
 	if (nohup)
 	    return TRUE;
 	/* else pour through... */
     case CTRL_CLOSE_EVENT:
-    case CTRL_SHUTDOWN_EVENT:
 	erl_exit(0, "");
 	break;
     }
@@ -127,11 +127,11 @@ BOOL WINAPI ctrl_handler(DWORD dwCtrlType)
 	SetEvent(erts_sys_break_event);
 	break;
     case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
 	if (nohup)
 	    return TRUE;
 	/* else pour through... */
     case CTRL_CLOSE_EVENT:
-    case CTRL_SHUTDOWN_EVENT:
 	erl_exit(0, "");
 	break;
     }

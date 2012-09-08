@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 1997-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1997-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -25,7 +25,7 @@
 	 init_per_group/2,end_per_group/2,
 	 init_per_testcase/2,end_per_testcase/2,
 	 fpe/1,fp_drv/1,fp_drv_thread/1,denormalized/1,match/1,
-	 bad_float_unpack/1,cmp_zero/1, cmp_integer/1, cmp_bignum/1]).
+	 bad_float_unpack/1, write/1, cmp_zero/1, cmp_integer/1, cmp_bignum/1]).
 -export([otp_7178/1]).
 -export([hidden_inf/1]).
 
@@ -42,7 +42,7 @@ suite() -> [{ct_hooks,[ts_install_cth]}].
 
 all() -> 
     [fpe, fp_drv, fp_drv_thread, otp_7178, denormalized,
-     match, bad_float_unpack, {group, comparison}
+     match, bad_float_unpack, write, {group, comparison}
      ,hidden_inf
     ].
 
@@ -189,6 +189,11 @@ bad_float_unpack(Config) when is_list(Config) ->
 
 bad_float_unpack_match(<<F:64/float>>) -> F;
 bad_float_unpack_match(<<I:64/integer-signed>>) -> I.
+
+%% Exposes endianness issues.
+
+write(Config) when is_list(Config) ->
+    "1.0" = io_lib:write(1.0).
 
 cmp_zero(_Config) ->
     cmp(0.5e-323,0).

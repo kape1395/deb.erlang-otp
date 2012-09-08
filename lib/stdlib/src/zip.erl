@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 2006-2011. All Rights Reserved.
+%% Copyright Ericsson AB 2006-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -1017,7 +1017,7 @@ cd_file_header_from_lh_and_pos(LH, Pos) ->
 		    file_name_length = FileNameLength,
 		    extra_field_length = ExtraFieldLength,
 		    file_comment_length = 0, % FileCommentLength,
-		    disk_num_start = 1, % DiskNumStart,
+		    disk_num_start = 0, % DiskNumStart,
 		    internal_attr = 0, % InternalAttr,
 		    external_attr = 0, % ExternalAttr,
 		    local_header_offset = Pos}.

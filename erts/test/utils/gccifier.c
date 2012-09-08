@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2004-2009. All Rights Reserved.
+ * Copyright Ericsson AB 2004-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -73,17 +73,23 @@ save_arg(args_t *args, char *arg1, ...)
 	    args->vec = (char **) (args->no
 				   ? realloc((void *) args->vec,
 					     (sizeof(char *)
-					      *(args->no + ARGS_INCR + 1)))
+					      *(args->no + ARGS_INCR + 2)))
 				   : malloc((sizeof(char *)
-					     *(args->no + ARGS_INCR + 1))));
+					     *(args->no + ARGS_INCR + 2))));
 	    if (!args->vec)
 		enomem();
 	    args->no += ARGS_INCR;
+	}
+	if (carg == arg1) {
+	  args->vec[args->ix++] = "\"";
+	  args->chars++;
 	}
 	args->vec[args->ix++] = carg;
 	args->chars += strlen(carg);
 	carg = va_arg(argp, char *);
     }
+    args->vec[args->ix++] = "\"";
+    args->chars++;
     args->vec[args->ix++] = " ";
     args->chars++;
     va_end(argp);
@@ -230,6 +236,9 @@ main(int argc, char *argv[])
 	else if (is_prefix("-L", &arg)) {
 	    CHECK_FIRST_LINK_ARG;
 	    save_arg(&link_args, "-libpath:", arg, NULL);
+	}
+	else if (strcmp("-link",arg) == 0) {
+	  CHECK_FIRST_LINK_ARG;
 	}
 #endif /* #ifdef __WIN32__ */
 	else if (is_prefix("-l", &arg)) {

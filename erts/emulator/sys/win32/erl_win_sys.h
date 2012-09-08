@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 1997-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1997-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -171,8 +171,8 @@ extern clock_t sys_times(SysTimes *buffer);
 extern char *win_build_environment(char *);
 
 typedef struct {
-    char *environment_strings;
-    char *next_string;
+    WCHAR *environment_strings;
+    WCHAR *next_string;
 } GETENV_STATE;
 
 void erts_sys_env_init(void);

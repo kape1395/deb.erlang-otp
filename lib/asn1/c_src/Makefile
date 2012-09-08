@@ -1,7 +1,7 @@
 #
 # %CopyrightBegin%
 #
-# Copyright Ericsson AB 2002-2011. All Rights Reserved.
+# Copyright Ericsson AB 2002-2012. All Rights Reserved.
 #
 # The contents of this file are subject to the Erlang Public License,
 # Version 1.1, (the "License"); you may not use this file except in
@@ -110,10 +110,10 @@ $(NIF_SHARED_OBJ_FILE): $(NIF_OBJ_FILES)
 include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt
-	$(INSTALL_DIR) $(RELSYSDIR)/priv/lib
-	$(INSTALL_PROGRAM) $(NIF_SHARED_OBJ_FILE) $(RELSYSDIR)/priv/lib
-	$(INSTALL_DIR) $(RELSYSDIR)/c_src
-	$(INSTALL_DATA) *.c $(RELSYSDIR)/c_src
+	$(INSTALL_DIR) "$(RELSYSDIR)/priv/lib"
+	$(INSTALL_PROGRAM) $(NIF_SHARED_OBJ_FILE) "$(RELSYSDIR)/priv/lib"
+	$(INSTALL_DIR) "$(RELSYSDIR)/c_src"
+	$(INSTALL_DATA) *.c "$(RELSYSDIR)/c_src"
 
 release_docs_spec:
 

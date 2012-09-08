@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2006-2011. All Rights Reserved.
+ * Copyright Ericsson AB 2006-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -185,6 +185,18 @@ main(int argc, char** argv)
 
     if (argc > 2 && strcmp(argv[1], "+S") == 0) {
 	PUSH3("-smp", "+S", argv[2]);
+	argc--, argv++;
+	argc--, argv++;
+    }
+
+    if (argc > 2 && strcmp(argv[1], "+P") == 0) {
+	PUSH2("+P", argv[2]);
+	argc--, argv++;
+	argc--, argv++;
+    } else PUSH2("+P", "1000000");
+
+    if (argc > 2 && strcmp(argv[1], "+sbt") == 0) {
+	PUSH2("+sbt", argv[2]);
 	argc--, argv++;
 	argc--, argv++;
     }

@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 1996-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2012. All Rights Reserved.
 %% 
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -120,9 +120,9 @@ del_object_bag(Tab, Key, Obj, Pos, Ixt, undefined) ->
     IxKey = element(Pos, Obj),
     Old = [X || X <-  mnesia_lib:db_get(Tab, Key), element(Pos, X) =:= IxKey],
     del_object_bag(Tab, Key, Obj, Pos, Ixt, Old);
-%% If Tab type is bag we need remove index identifier if Tab 
-%% contains less than 2 elements. 
-del_object_bag(_Tab, Key, Obj, Pos, Ixt, Old) when length(Old) < 2 ->
+%% If Tab type is bag we need remove index identifier if the object being
+%% deleted was the last one
+del_object_bag(_Tab, Key, Obj, Pos, Ixt, Old) when Old =:= [Obj] ->
     del_ixes(Ixt, [Obj], Pos, Key);
 del_object_bag(_Tab, _Key, _Obj, _Pos, _Ixt, _Old) -> ok.
 

@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 1996-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1996-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -121,9 +121,11 @@ static char *plusM_other_switches[] = {
 /* +s arguments with values */
 static char *pluss_val_switches[] = {
     "bt",
+    "bwt",
     "cl",
     "ct",
     "wt",
+    "ws",
     "ss",
     NULL
 };
@@ -157,20 +159,13 @@ static char *plusz_val_switches[] = {
 #endif
 
 #define SMP_SUFFIX	  ".smp"
-#define HYBRID_SUFFIX	  ".hybrid"
-
-#ifdef __WIN32__
 #define DEBUG_SUFFIX      ".debug"
-#define EMU_TYPE_SUFFIX_LENGTH  (strlen(HYBRID_SUFFIX)+(strlen(DEBUG_SUFFIX)))
-#else
-/* The length of the longest memory architecture suffix. */
-#define EMU_TYPE_SUFFIX_LENGTH  strlen(HYBRID_SUFFIX)
-#endif
+#define EMU_TYPE_SUFFIX_LENGTH  strlen(DEBUG_SUFFIX)
+
 /*
  * Define flags for different memory architectures.
  */
 #define EMU_TYPE_SMP		0x0001
-#define EMU_TYPE_HYBRID		0x0002
 
 #ifdef __WIN32__
 #define EMU_TYPE_DEBUG		0x0004
@@ -184,7 +179,7 @@ void error(char* format, ...);
  * Local functions.
  */
 
-#if !defined(ERTS_HAVE_SMP_EMU) || !defined(ERTS_HAVE_HYBRID_EMU)
+#if !defined(ERTS_HAVE_SMP_EMU)
 static void usage_notsup(const char *switchname);
 #endif
 static void usage_msg(const char *msg);
@@ -250,7 +245,9 @@ static char* config_script = NULL; /* used by option -start_erl and -config */
 
 static HANDLE this_module_handle;
 static int run_werl;
-
+static WCHAR *utf8_to_utf16(unsigned char *bytes);
+static char *utf16_to_utf8(WCHAR *wstr);
+static WCHAR *latin1_to_utf16(char *str);
 #endif
 
 /*
@@ -268,8 +265,12 @@ static void
 set_env(char *key, char *value)
 {
 #ifdef __WIN32__
-    if (!SetEnvironmentVariable((LPCTSTR) key, (LPCTSTR) value))
+    WCHAR *wkey = latin1_to_utf16(key);
+    WCHAR *wvalue = utf8_to_utf16(value);
+    if (!SetEnvironmentVariableW(wkey, wvalue))
 	error("SetEnvironmentVariable(\"%s\", \"%s\") failed!", key, value);
+    efree(wkey);
+    efree(wvalue);
 #else
     size_t size = strlen(key) + 1 + strlen(value) + 1;
     char *str = emalloc(size);
@@ -282,25 +283,33 @@ set_env(char *key, char *value)
 #endif
 }
 
+
 static char *
 get_env(char *key)
 {
 #ifdef __WIN32__
     DWORD size = 32;
-    char *value = NULL;
+    WCHAR *value = NULL;
+    WCHAR *wkey = latin1_to_utf16(key);
+    char *res;
     while (1) {
 	DWORD nsz;
 	if (value)
 	    efree(value);
-	value = emalloc(size);
+	value = emalloc(size*sizeof(WCHAR));
 	SetLastError(0);
-	nsz = GetEnvironmentVariable((LPCTSTR) key, (LPTSTR) value, size);
+	nsz = GetEnvironmentVariableW(wkey, value, size);
 	if (nsz == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND) {
 	    efree(value);
+	    efree(wkey);
 	    return NULL;
 	}
-	if (nsz <= size)
-	    return value;
+	if (nsz <= size) {
+	    efree(wkey);
+	    res = utf16_to_utf8(value);
+	    efree(value);
+	    return res;
+	}
 	size = nsz;
     }
 #else
@@ -366,9 +375,6 @@ add_extra_suffixes(char *prog, int type)
 #endif
    if (type == EMU_TYPE_SMP) {
        p = write_str(p, SMP_SUFFIX);
-   }
-   else if (type == EMU_TYPE_HYBRID) {
-       p = write_str(p, HYBRID_SUFFIX);
    }
 #ifdef __WIN32__
    if (dll) {
@@ -535,13 +541,6 @@ int main(int argc, char **argv)
 		emu_type_passed |= EMU_TYPE_DEBUG;
 		emu_type |= EMU_TYPE_DEBUG;
 #endif
-	    } else if (strcmp(argv[i], "-hybrid") == 0) {
-		emu_type_passed |= EMU_TYPE_HYBRID;
-#ifdef ERTS_HAVE_HYBRID_EMU
-		emu_type |= EMU_TYPE_HYBRID;
-#else
-		usage_notsup("-hybrid");
-#endif
 	    } else if (strcmp(argv[i], "-extra") == 0) {
 		break;
 	    }
@@ -551,19 +550,6 @@ int main(int argc, char **argv)
 
     erts_cpu_info_destroy(cpuinfo);
     cpuinfo = NULL;
-
-    if ((emu_type & EMU_TYPE_HYBRID) && (emu_type & EMU_TYPE_SMP)) {
-	/*
-	 * We have a conflict. Only using explicitly passed arguments
-	 * may solve it...
-	 */
-	emu_type &= emu_type_passed;
-	if ((emu_type & EMU_TYPE_HYBRID) && (emu_type & EMU_TYPE_SMP)) {
-	    usage_msg("Hybrid heap emulator with SMP support selected. The "
-		      "combination hybrid heap and SMP support is currently "
-		      "not supported.");
-	}
-    }
 
     if (malloc_lib) {
 	if (strcmp(malloc_lib, "libc") != 0)
@@ -1115,9 +1101,6 @@ usage_aux(void)
 	  "]"
 #endif
 	  "] "
-#ifdef ERTS_HAVE_HYBRID_EMU
-	  "[-hybrid] "
-#endif
 	  "[-make] [-man [manopts] MANPAGE] [-x] [-emu_args] "
 	  "[-args_file FILENAME] [+A THREADS] [+a SIZE] [+B[c|d|i]] [+c] "
 	  "[+h HEAP_SIZE_OPTION] [+K BOOLEAN] "
@@ -1135,7 +1118,7 @@ usage(const char *switchname)
     usage_aux();
 }
 
-#if !defined(ERTS_HAVE_SMP_EMU) || !defined(ERTS_HAVE_HYBRID_EMU)
+#if !defined(ERTS_HAVE_SMP_EMU)
 static void
 usage_notsup(const char *switchname)
 {
@@ -1176,7 +1159,7 @@ start_epmd(char *epmd)
 	erts_snprintf(epmd_cmd, sizeof(epmd_cmd), "%s" DIRSEP "epmd", bindir);
 	arg1 = "-daemon";
 #else
-	erts_snprintf(epmd_cmd, sizeof(epmd_cmd), "%s" DIRSEP "epmd -daemon", bindir);
+	erts_snprintf(epmd_cmd, sizeof(epmd_cmd), "\"%s" DIRSEP "epmd\" -daemon", bindir);
 #endif
     } 
 #ifdef __WIN32__
@@ -2111,4 +2094,147 @@ possibly_quote(char* arg)
     return narg;
 }
 
+/*
+ * Unicode helpers to handle environment and command line parameters on
+ * Windows. We internally handle all environment variables in UTF8,
+ * but put and get the environment using the WCHAR (limited UTF16) interface
+ * 
+ * These are simplified to only handle Unicode characters that can fit in 
+ * Windows simplified UTF16, i.e. characters that fit in 16 bits.
+ */
+
+static int utf8_len(unsigned char first) 
+{
+    if ((first & ((unsigned char) 0x80)) == 0) {
+	return 1;
+    } else if ((first & ((unsigned char) 0xE0)) == 0xC0) {
+	return 2;
+    } else if ((first & ((unsigned char) 0xF0)) == 0xE0) {
+	return 3;
+    } else if ((first & ((unsigned char) 0xF8)) == 0xF0) {
+	return 4;
+    } 
+    return 1; /* will be a '?' */
+}
+
+static WCHAR *utf8_to_utf16(unsigned char *bytes)
+{
+    unsigned int unipoint;
+    unsigned char *tmp = bytes;
+    WCHAR *target, *res;
+    int num = 0;
+    
+    while (*tmp) {
+	num++;
+	tmp += utf8_len(*tmp);
+    }
+    res = target = emalloc((num + 1) * sizeof(WCHAR));
+    while (*bytes) {
+	if (((*bytes) & ((unsigned char) 0x80)) == 0) {
+	    unipoint = (Uint) *bytes;
+	    ++bytes;
+	} else if (((*bytes) & ((unsigned char) 0xE0)) == 0xC0) {
+	    unipoint = 
+		(((Uint) ((*bytes) & ((unsigned char) 0x1F))) << 6) |
+		((Uint) (bytes[1] & ((unsigned char) 0x3F))); 	
+	    bytes += 2;
+	} else if (((*bytes) & ((unsigned char) 0xF0)) == 0xE0) {
+	    unipoint = 
+		(((Uint) ((*bytes) & ((unsigned char) 0xF))) << 12) |
+		(((Uint) (bytes[1] & ((unsigned char) 0x3F))) << 6) |
+		((Uint) (bytes[2] & ((unsigned char) 0x3F)));
+	    if (unipoint > 0xFFFF) {
+		 unipoint = (unsigned int) '?';
+	    }
+	    bytes +=3;
+	} else if (((*bytes) & ((unsigned char) 0xF8)) == 0xF0) {
+	    unipoint = (unsigned int) '?'; /* Cannot put in a wchar */
+	    bytes += 4;
+	} else {
+	    unipoint = (unsigned int) '?';
+	}
+	*target++ = (WCHAR) unipoint;
+    }
+    *target = L'\0';
+    return res;
+}
+
+static int put_utf8(WCHAR ch, unsigned char *target, int sz, int *pos)
+{
+    Uint x = (Uint) ch;
+    if (x < 0x80) {
+    if (*pos >= sz) {
+	return -1;
+    }
+	target[(*pos)++] = (unsigned char) x;
+    }
+    else if (x < 0x800) {
+	if (((*pos) + 1) >= sz) {
+	    return -1;
+	}
+	target[(*pos)++] = (((unsigned char) (x >> 6)) | 
+			    ((unsigned char) 0xC0));
+	target[(*pos)++] = (((unsigned char) (x & 0x3F)) | 
+			    ((unsigned char) 0x80));
+    } else {
+	if ((x >= 0xD800 && x <= 0xDFFF) ||
+	    (x == 0xFFFE) ||
+	    (x == 0xFFFF)) { /* Invalid unicode range */
+	    return -1;
+	}
+	if (((*pos) + 2) >= sz) {
+	    return -1;
+	}
+
+	target[(*pos)++] = (((unsigned char) (x >> 12)) | 
+			    ((unsigned char) 0xE0));
+	target[(*pos)++] = ((((unsigned char) (x >> 6)) & 0x3F)  | 
+			    ((unsigned char) 0x80));
+	target[(*pos)++] = (((unsigned char) (x & 0x3F)) | 
+			    ((unsigned char) 0x80));
+    }
+    return 0;
+}
+
+static int need_bytes_for_utf8(WCHAR x)
+{
+    if (x < 0x80)
+	return 1;
+    else if (x < 0x800)
+	return 2;
+    else 
+	return 3;
+}
+
+static WCHAR *latin1_to_utf16(char *str)
+{
+    int len = strlen(str);
+    int i;
+    WCHAR *wstr = emalloc((len+1) * sizeof(WCHAR));
+    for(i=0;i<len;++i)
+	wstr[i] = (WCHAR) str[i];
+    wstr[len] = L'\0';
+    return wstr;
+}
+
+static char *utf16_to_utf8(WCHAR *wstr) 
+{
+    int len = wcslen(wstr);
+    char *result;
+    int i,pos;
+    int reslen = 0;
+    for(i=0;i<len;++i) {
+	reslen += need_bytes_for_utf8(wstr[i]);
+    }
+    result = emalloc(reslen+1);
+    pos = 0;
+    for(i=0;i<len;++i) {
+	if (put_utf8((int) wstr[i], result, reslen, &pos) < 0) {
+	    break;
+	}
+    }
+    result[pos] = '\0';
+    return result;
+}
+    
 #endif

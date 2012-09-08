@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 1999-2011. All Rights Reserved.
+ * Copyright Ericsson AB 1999-2012. All Rights Reserved.
  *
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -351,7 +351,7 @@ static int clock_resolution;
 /*
 ** The clock resolution should really be the resolution of the 
 ** time function in use, which on most platforms 
-** is 1. On VxWorks the resolution shold be 
+** is 1. On VxWorks the resolution should be
 ** the number of ticks per second (or 1, which would work nicely to).
 **
 ** Setting lower resolutions is mostly interesting when timers are used
@@ -717,6 +717,11 @@ int univ_to_seconds(Sint year, Sint month, Sint day, Sint hour, Sint minute, Sin
     return 1;
 }
 
+#if defined(HAVE_TIME2POSIX) && defined(HAVE_DECL_TIME2POSIX) && \
+    !HAVE_DECL_TIME2POSIX
+extern time_t time2posix(time_t);
+#endif
+
 int 
 local_to_univ(Sint *year, Sint *month, Sint *day, 
 	      Sint *hour, Sint *minute, Sint *second, int isdst)
@@ -757,7 +762,7 @@ local_to_univ(Sint *year, Sint *month, Sint *day,
 	       refuses to give us a DST time, we simulate the Linux/Solaris
 	       behaviour of giving the same data as if is_dst was not set. */
 	    t.tm_isdst = 0;
-	    if (erl_mktime(&the_clock, &t)) {
+	    if (erl_mktime(&the_clock, &t) < 0) {
 		/* Failed anyway, something else is bad - will be a badarg */
 		return 0;
 	    }
@@ -766,6 +771,11 @@ local_to_univ(Sint *year, Sint *month, Sint *day,
 	    return 0;
 	}
     }
+
+#ifdef HAVE_TIME2POSIX
+    the_clock = time2posix(the_clock);
+#endif
+
 #ifdef HAVE_GMTIME_R
     tm = gmtime_r(&the_clock, &tmbuf);
 #else

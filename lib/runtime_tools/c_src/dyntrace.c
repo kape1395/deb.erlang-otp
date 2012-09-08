@@ -36,6 +36,10 @@
 
 void dtrace_nifenv_str(ErlNifEnv *env, char *process_buf);
 void get_string_maybe(ErlNifEnv *env, const ERL_NIF_TERM term, char **ptr, char *buf, int bufsiz);
+#ifdef HAVE_USE_DTRACE
+ERL_NIF_TERM erl_nif_user_trace_s1(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+ERL_NIF_TERM erl_nif_user_trace_i4s4(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+#endif
 
 #ifdef VALGRIND
     #  include <valgrind/memcheck.h>
@@ -56,11 +60,13 @@ static int load(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info);
 static ERL_NIF_TERM available(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM user_trace_s1(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM user_trace_i4s4(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM user_trace_n(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
 
 static ErlNifFunc nif_funcs[] = {
     {"available", 0, available},
     {"user_trace_s1", 1, user_trace_s1},
-    {"user_trace_i4s4", 9, user_trace_i4s4}
+    {"user_trace_i4s4", 9, user_trace_i4s4},
+    {"user_trace_n", 10, user_trace_n}
 };
 
 ERL_NIF_INIT(dyntrace, nif_funcs, load, NULL, NULL, NULL)
@@ -96,76 +102,25 @@ static ERL_NIF_TERM available(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
 static ERL_NIF_TERM user_trace_s1(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
 #ifdef	HAVE_USE_DTRACE
-    ErlNifBinary message_bin;
-    DTRACE_CHARBUF(messagebuf, MESSAGE_BUFSIZ + 1);
-
-    if (DTRACE_ENABLED(user_trace_s1)) {
-	if (!enif_inspect_iolist_as_binary(env, argv[0], &message_bin) ||
-	    message_bin.size > MESSAGE_BUFSIZ) {
-	    return atom_badarg;
-	}
-	memcpy(messagebuf, (char *) message_bin.data, message_bin.size);
-        messagebuf[message_bin.size] = '\0';
-	DTRACE1(user_trace_s1, messagebuf);
-	return atom_true;
-    } else {
-	return atom_false;
-    }
+    return erl_nif_user_trace_s1(env, argc, argv);
 #else
     return atom_error;
 #endif
 }
 
-void
-get_string_maybe(ErlNifEnv *env,
-                 const ERL_NIF_TERM term, char **ptr, char *buf, int bufsiz)
-{
-    ErlNifBinary str_bin;
-
-    if (!enif_inspect_iolist_as_binary(env, term, &str_bin) ||
-        str_bin.size > bufsiz) {
-        *ptr = NULL;
-    } else {
-        memcpy(buf, (char *) str_bin.data, str_bin.size);
-        buf[str_bin.size] = '\0';
-        *ptr = buf;
-    }
-}
-
 static ERL_NIF_TERM user_trace_i4s4(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
 #ifdef	HAVE_USE_DTRACE
-    DTRACE_CHARBUF(procbuf, 32 + 1);
-    DTRACE_CHARBUF(user_tagbuf, MESSAGE_BUFSIZ + 1);
-    char *utbuf = NULL;
-    ErlNifSInt64 i1, i2, i3, i4;
-    DTRACE_CHARBUF(messagebuf1, MESSAGE_BUFSIZ + 1);
-    DTRACE_CHARBUF(messagebuf2, MESSAGE_BUFSIZ + 1);
-    DTRACE_CHARBUF(messagebuf3, MESSAGE_BUFSIZ + 1);
-    DTRACE_CHARBUF(messagebuf4, MESSAGE_BUFSIZ + 1);
-    char *mbuf1 = NULL, *mbuf2 = NULL, *mbuf3 = NULL, *mbuf4 = NULL;
+    return erl_nif_user_trace_i4s4(env, argc, argv);
+#else
+    return atom_error;
+#endif
+}
 
-    if (DTRACE_ENABLED(user_trace_i4s4)) {
-	dtrace_nifenv_str(env, procbuf);
-        get_string_maybe(env, argv[0], &utbuf, user_tagbuf, MESSAGE_BUFSIZ);
-        if (! enif_get_int64(env, argv[1], &i1))
-            i1 = 0;
-        if (! enif_get_int64(env, argv[2], &i2))
-            i2 = 0;
-        if (! enif_get_int64(env, argv[3], &i3))
-            i3 = 0;
-        if (! enif_get_int64(env, argv[4], &i4))
-            i4 = 0;
-        get_string_maybe(env, argv[5], &mbuf1, messagebuf1, MESSAGE_BUFSIZ);
-        get_string_maybe(env, argv[6], &mbuf2, messagebuf2, MESSAGE_BUFSIZ);
-        get_string_maybe(env, argv[7], &mbuf3, messagebuf3, MESSAGE_BUFSIZ);
-        get_string_maybe(env, argv[8], &mbuf4, messagebuf4, MESSAGE_BUFSIZ);
-	DTRACE10(user_trace_i4s4, procbuf, utbuf,
-		 i1, i2, i3, i4, mbuf1, mbuf2, mbuf3, mbuf4);
-	return atom_true;
-    } else {
-	return atom_false;
-    }
+static ERL_NIF_TERM user_trace_n(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+#ifdef	HAVE_USE_DTRACE
+    return erl_nif_user_trace_n(env, argc, argv);
 #else
     return atom_error;
 #endif

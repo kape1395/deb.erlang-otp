@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  * 
- * Copyright Ericsson AB 2002-2009. All Rights Reserved.
+ * Copyright Ericsson AB 2002-2012. All Rights Reserved.
  * 
  * The contents of this file are subject to the Erlang Public License,
  * Version 1.1, (the "License"); you may not use this file except in
@@ -99,17 +99,6 @@ extern unsigned long long messages_copied;
 extern unsigned long long messages_ego;
 extern unsigned long long minor_gc;
 extern unsigned long long major_gc;
-#ifdef HYBRID
-extern unsigned long long minor_global_gc;
-extern unsigned long long major_global_gc;
-extern unsigned long long gc_in_copy;
-#ifdef INCREMENTAL
-extern unsigned long long minor_gc_cycles;
-extern unsigned long long major_gc_cycles;
-extern unsigned long long minor_gc_stages;
-extern unsigned long long major_gc_stages;
-#endif
-#endif
 
 #define BM_COUNT(var) (var)++;
 

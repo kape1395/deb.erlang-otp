@@ -1,7 +1,7 @@
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1996-2011. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2012. All Rights Reserved.
 %%
 %% The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
@@ -893,6 +893,10 @@ index_update_bag(Config)when is_list(Config) ->
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
     ?match({atomic, ok},
 	   mnesia:transaction(fun() -> mnesia:write(Rec1) end)),
+    ?match({atomic, [Rec1]},
+	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
+
+    ?match({atomic, ok}, mnesia:transaction(fun() -> mnesia:delete_object(Rec5) end)),
     ?match({atomic, [Rec1]},
 	   mnesia:transaction(fun() -> mnesia:index_read(Tab, 2, ValPos) end)),
 

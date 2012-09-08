@@ -2,7 +2,7 @@
 
 {application, eunit,
  [{description, "EUnit"},
-  {vsn, "2.2.2"},
+  {vsn, "2.2.3"},
   {modules, [eunit,
 	     eunit_autoexport,
 	     eunit_data,
@@ -14,7 +14,6 @@
 	     eunit_striptests,
 	     eunit_surefire,
 	     eunit_test,
-	     eunit_tests,
 	     eunit_tty]},
   {registered,[]},
   {applications, [kernel,stdlib]},
