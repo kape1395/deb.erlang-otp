@@ -1,3 +1,9 @@
+erlang-otp (15B02-0ubuntu1) precise; urgency=low
+
+  * Packaging Erlang/OTP R15B02.
+
+ -- Karolis Petrauskas <k.petrauskas@gmail.com>  Sat, 08 Sep 2012 18:45:19 +0300
+
 erlang-otp (15B01-0ubuntu1) precise; urgency=low
 
   * Packaging Erlang/OTP R15B01.
